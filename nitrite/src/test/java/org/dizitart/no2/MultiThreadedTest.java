@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
@@ -171,13 +173,7 @@ public class MultiThreadedTest {
         }
     }
 
-    private Document generate() {
-        try {
-            Thread.sleep(generator.nextInt(50));
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
+    private synchronized Document generate() {
         Document document = createDocument("unixTime", System.nanoTime() + docCounter.incrementAndGet());
         byte[] blob = new byte[1024];
         generator.nextBytes(blob);

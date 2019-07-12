@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,21 +13,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.util;
 
 import org.dizitart.no2.Document;
-import org.dizitart.no2.internals.JacksonMapper;
-import org.dizitart.no2.internals.NitriteMapper;
+import org.dizitart.no2.mapper.JacksonFacade;
+import org.dizitart.no2.mapper.MapperFacade;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Set;
 
-import static org.dizitart.no2.util.DocumentUtils.getFields;
 import static org.dizitart.no2.util.DocumentUtils.getFieldValue;
+import static org.dizitart.no2.util.DocumentUtils.getFields;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
@@ -34,9 +35,9 @@ public class DocumentUtilsTest {
     private Document doc;
 
     @Before
-    public void setUp() throws IOException {
-        NitriteMapper nitriteMapper = new JacksonMapper();
-        doc = nitriteMapper.parse("{" +
+    public void setUp() {
+    	MapperFacade mapperFacade = new JacksonFacade();
+        doc = mapperFacade.parse("{" +
                 "  score: 1034," +
                 "  location: {  " +
                 "       state: 'NY', " +
@@ -53,8 +54,8 @@ public class DocumentUtilsTest {
     }
 
     @Test
-    public void testGetValue() throws IOException {
-        NitriteMapper nitriteMapper = new JacksonMapper();
+    public void testGetValue() {
+    	MapperFacade nitriteMapper = new JacksonFacade();
         assertEquals(getFieldValue(doc, ""), null);
         assertEquals(getFieldValue(doc, "score"), 1034);
         assertEquals(getFieldValue(doc, "location.state"), "NY");

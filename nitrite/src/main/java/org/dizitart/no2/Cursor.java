@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,10 +13,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
 
+
+import java.util.Set;
 
 /**
  * An interface to iterate over database {@code find()} results. It provides a
@@ -25,11 +29,11 @@ package org.dizitart.no2;
  * [source,java]
  * . Example of {@link Cursor}
  * --
- *  // createId/open a database
+ *  // create/open a database
  *  Nitrite db = Nitrite.builder()
  *         .openOrCreate("user", "password");
  *
- *  // createId a collection named - test
+ *  // create a collection named - test
  *  NitriteCollection collection = db.getCollection("test");
  *
  *  // returns all ids un-filtered
@@ -43,7 +47,7 @@ package org.dizitart.no2;
  * --
  *
  * [icon="{@docRoot}/note.png"]
- * NOTE: To createId an iterator over the documents instead of the ids,
+ * NOTE: To create an iterator over the documents instead of the ids,
  * call on the {@link Cursor}.
  *
  *  @author Anindya Chatterjee
@@ -58,4 +62,27 @@ public interface Cursor extends RecordIterable<Document> {
      * @return a lazy iterable of documents.
      */
     RecordIterable<Document> project(Document projection);
+
+    /**
+     * Performs a left outer join with a foreign cursor with the specified lookup parameters.
+     *
+     * It performs an equality match on the localField to the foreignField from the documents of the foreign cursor.
+     * If an input document does not contain the localField, the join treats the field as having a value of `null`
+     * for matching purposes.
+     *
+     * @param foreignCursor the foreign cursor for the join.
+     * @param lookup the lookup parameter for the join operation.
+     *
+     * @return a lazy iterable of joined documents.
+     * @since 2.1.0
+     */
+    RecordIterable<Document> join(Cursor foreignCursor, Lookup lookup);
+
+    /**
+     * Gets the set of all {@link NitriteId}s from the {@code find()} results.
+     *
+     * @return a set of all {@link NitriteId}s.
+     * @since 3.3.0
+     */
+    Set<NitriteId> idSet();
 }

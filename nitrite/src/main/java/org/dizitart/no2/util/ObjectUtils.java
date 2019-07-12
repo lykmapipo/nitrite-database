@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,34 +13,34 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.util;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
+import org.dizitart.no2.Document;
+import org.dizitart.no2.NitriteId;
 import org.dizitart.no2.exceptions.IndexingException;
 import org.dizitart.no2.exceptions.InvalidIdException;
 import org.dizitart.no2.exceptions.NotIdentifiableException;
-import org.dizitart.no2.internals.NitriteMapper;
-import org.dizitart.no2.objects.Id;
-import org.dizitart.no2.objects.Index;
-import org.dizitart.no2.objects.Indices;
-import org.dizitart.no2.objects.ObjectFilter;
+import org.dizitart.no2.mapper.NitriteMapper;
+import org.dizitart.no2.objects.*;
+import org.objenesis.Objenesis;
 import org.objenesis.ObjenesisStd;
+import org.objenesis.instantiator.ObjectInstantiator;
 
 import java.lang.reflect.Field;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 
+import static org.dizitart.no2.Constants.KEY_OBJ_SEPARATOR;
 import static org.dizitart.no2.exceptions.ErrorCodes.*;
 import static org.dizitart.no2.exceptions.ErrorMessage.*;
 import static org.dizitart.no2.objects.filters.ObjectFilters.eq;
-import static org.dizitart.no2.util.ReflectionUtils.getField;
+import static org.dizitart.no2.util.ReflectionUtils.*;
 import static org.dizitart.no2.util.StringUtils.isNullOrEmpty;
-import static org.dizitart.no2.util.ValidationUtils.notNull;
-import static org.dizitart.no2.util.ValidationUtils.validateObjectIndexField;
+import static org.dizitart.no2.util.ValidationUtils.*;
 
 /**
  * A utility class for {@link Object}.
@@ -50,19 +51,8 @@ import static org.dizitart.no2.util.ValidationUtils.validateObjectIndexField;
 @UtilityClass
 @Slf4j
 public class ObjectUtils {
-
-    /**
-     * Gets the object type from the collection name.
-     *
-     * @param collectionName the collection name
-     * @return the object type
-     */
-    public static String findObjectTypeName(String collectionName) {
-        if (isObjectStore(collectionName)) {
-            return collectionName;
-        }
-        return null;
-    }
+    private static Map<String, ObjectInstantiator> constructorCache = new HashMap<>();
+    private static Objenesis objenesis = new ObjenesisStd();
 
     /**
      * Generates the name of an {@link org.dizitart.no2.objects.ObjectRepository}.
@@ -77,6 +67,22 @@ public class ObjectUtils {
     }
 
     /**
+     * Generates the name of an {@link org.dizitart.no2.objects.ObjectRepository}
+     * with an unique key identifier.
+     *
+     * @param <T>  the type parameter
+     * @param key  the key identifier
+     * @param type the type of object stored in the repository
+     * @return the name of the object repository.
+     */
+    public static <T> String findObjectStoreName(String key, Class<T> type) {
+        notNull(key, errorMessage("key can not be null", VE_OBJ_STORE_NULL_KEY));
+        notEmpty(key, errorMessage("key can not be empty", VE_OBJ_STORE_EMPTY_KEY));
+        notNull(type, errorMessage("type can not be null", VE_OBJ_STORE_NULL_TYPE));
+        return type.getName() + KEY_OBJ_SEPARATOR + key;
+    }
+
+    /**
      * Extract indices information by scanning for {@link Index} annotated fields.
      *
      * @param <T>           the type parameter
@@ -86,36 +92,35 @@ public class ObjectUtils {
      */
     public static <T> Set<Index> extractIndices(NitriteMapper nitriteMapper, Class<T> type) {
         notNull(type, errorMessage("type can not be null", VE_INDEX_ANNOTATION_NULL_TYPE));
-        val indexes = type.getAnnotation(Indices.class);
+
+        List<Indices> indicesList;
+        if (type.isAnnotationPresent(InheritIndices.class)) {
+            indicesList = findAnnotations(Indices.class, type);
+        } else {
+            indicesList = new ArrayList<>();
+            Indices indices = type.getAnnotation(Indices.class);
+            if (indices != null) indicesList.add(indices);
+        }
+
         Set<Index> indexSet = new LinkedHashSet<>();
-        if (indexes != null) {
-            Index[] indexList = indexes.value();
-            for (Index index : indexList) {
-                String name = index.value();
-                Field field = getField(type, name);
-                if (field != null) {
-                    validateObjectIndexField(nitriteMapper, field.getType(), field.getName());
-                    indexSet.add(index);
-                } else {
-                    throw new IndexingException(errorMessage(
-                            "field " + name + " does not exists for type " + type.getName(),
-                            IE_OBJ_INDICES_INVALID_FIELD));
-                }
+        if (indicesList != null) {
+            for (Indices indices : indicesList) {
+                Index[] indexList = indices.value();
+                populateIndex(nitriteMapper, type, Arrays.asList(indexList), indexSet);
             }
         }
 
-        val index = type.getAnnotation(Index.class);
-        if (index != null) {
-            String name = index.value();
-            Field field = getField(type, name);
-            if (field != null) {
-                validateObjectIndexField(nitriteMapper, field.getType(), field.getName());
-                indexSet.add(index);
-            } else {
-                throw new IndexingException(errorMessage(
-                        "field " + name + " does not exists for type " + type.getName(),
-                        IE_OBJ_INDEX_INVALID_FIELD));
-            }
+        List<Index> indexList;
+        if (type.isAnnotationPresent(InheritIndices.class)) {
+            indexList = findAnnotations(Index.class, type);
+        } else {
+            indexList = new ArrayList<>();
+            Index index = type.getAnnotation(Index.class);
+            if (index != null) indexList.add(index);
+        }
+
+        if (indexList != null) {
+            populateIndex(nitriteMapper, type, indexList, indexSet);
         }
         return indexSet;
     }
@@ -129,10 +134,16 @@ public class ObjectUtils {
      * @return the id field
      */
     public static <T> Field getIdField(NitriteMapper nitriteMapper, Class<T> type) {
-        Field[] declaredFields = type.getDeclaredFields();
+        List<Field> fields;
+        if (type.isAnnotationPresent(InheritIndices.class)) {
+            fields = getFieldsUpto(type, Object.class);
+        } else {
+            fields = Arrays.asList(type.getDeclaredFields());
+        }
+
         boolean alreadyIdFound = false;
         Field idField = null;
-        for (Field field : declaredFields) {
+        for (Field field : fields) {
             if (field.isAnnotationPresent(Id.class)) {
                 validateObjectIndexField(nitriteMapper, field.getType(), field.getName());
                 if (alreadyIdFound) {
@@ -178,15 +189,92 @@ public class ObjectUtils {
             Class clazz = Class.forName(collectionName);
             return clazz != null;
         } catch (ClassNotFoundException e) {
+            return isKeyedObjectStore(collectionName);
+        }
+    }
+
+    /**
+     * Checks whether a collection name is a valid keyed object store name.
+     *
+     * @param collectionName the collection name
+     * @return `true` if it is a valid object store name; `false` otherwise.
+     */
+    public static boolean isKeyedObjectStore(String collectionName) {
+        try {
+            if (isNullOrEmpty(collectionName)) return false;
+            if (!collectionName.contains(KEY_OBJ_SEPARATOR)) return false;
+
+            String[] split = collectionName.split("\\" + KEY_OBJ_SEPARATOR);
+            if (split.length != 2) {
+                return false;
+            }
+            String storeName = split[0];
+            Class clazz = Class.forName(storeName);
+            return clazz != null;
+        } catch (ClassNotFoundException e) {
             return false;
         }
     }
 
-    static <T> T newInstance(Class<T> type) {
+    @SuppressWarnings("unchecked")
+    public static <T> T newInstance(Class<T> type) {
         try {
-            return type.newInstance();
+            String clazz = type.getName();
+            ObjectInstantiator instantiator = constructorCache.get(clazz);
+            if (instantiator == null) {
+                instantiator = objenesis.getInstantiatorOf(type);
+                constructorCache.put(clazz, instantiator);
+            }
+
+            return (T) instantiator.newInstance();
         } catch (Exception e) {
-            return new ObjenesisStd().newInstance(type);
+            log.error("Error while creating instance of " + type.getName(), e);
+            return null;
+        }
+    }
+
+    public static <T> Document toDocument(T object, NitriteMapper nitriteMapper,
+                                          Field idField, boolean update) {
+        Document document = nitriteMapper.asDocument(object);
+        if (idField != null) {
+            if (idField.getType() == NitriteId.class) {
+                try {
+                    idField.setAccessible(true);
+                    if (idField.get(object) == null) {
+                        NitriteId id = document.getId();
+                        idField.set(object, id);
+                        document.put(idField.getName(), id.getIdValue());
+                    } else if (!update) {
+                        throw new InvalidIdException(AUTO_ID_ALREADY_SET);
+                    }
+                } catch (IllegalAccessException iae) {
+                    throw new InvalidIdException(CANNOT_ACCESS_AUTO_ID);
+                }
+            }
+            Object idValue = document.get(idField.getName());
+            if (idValue == null) {
+                throw new InvalidIdException(ID_CAN_NOT_BE_NULL);
+            }
+            if (idValue instanceof String && isNullOrEmpty((String) idValue)) {
+                throw new InvalidIdException(ID_VALUE_CAN_NOT_BE_EMPTY_STRING);
+            }
+        }
+        return document;
+    }
+
+    private <T> void populateIndex(NitriteMapper nitriteMapper, Class<T> type,
+                                   List<Index> indexList, Set<Index> indexSet) {
+        for (Index index : indexList) {
+            String name = index.value();
+            Field field = getField(type, name, true);
+            if (field != null) {
+                validateObjectIndexField(nitriteMapper, field.getType(), field.getName());
+                indexSet.add(index);
+            } else {
+                throw new IndexingException(errorMessage(
+                        "field " + name + " does not exists for type " + type.getName(),
+                        IE_OBJ_INDEX_INVALID_FIELD));
+            }
         }
     }
 }

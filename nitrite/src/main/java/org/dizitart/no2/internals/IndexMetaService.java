@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.internals;
@@ -43,16 +45,11 @@ import static org.dizitart.no2.util.IndexUtils.internalName;
  */
 class IndexMetaService {
     private final NitriteMap<NitriteId, Document> underlyingMap;
-    private final NitriteMap<String, IndexMeta> indexMetadata;
-    private final Map<String, Object> fieldLock;
     private final NitriteStore mvStore;
 
     IndexMetaService(NitriteMap<NitriteId, Document> underlyingMap) {
         this.underlyingMap = underlyingMap;
         this.mvStore = underlyingMap.getStore();
-        String indexMetaName = getName();
-        indexMetadata = mvStore.openMap(indexMetaName);
-        this.fieldLock = new ConcurrentHashMap<>();
     }
 
     NitriteMap<NitriteId, Document> getUnderlyingMap() {
@@ -60,16 +57,17 @@ class IndexMetaService {
     }
 
     boolean hasIndex(String field) {
-        return indexMetadata.containsKey(field);
+        return getIndexMetadata().containsKey(field)
+            && getIndexMetadata().get(field) != null;
     }
 
     boolean hasTextIndex(String field) {
-        return indexMetadata.containsKey(field)
-                && indexMetadata.get(field).index.getIndexType() == IndexType.Fulltext;
+        return getIndexMetadata().containsKey(field)
+                && getIndexMetadata().get(field).index.getIndexType() == IndexType.Fulltext;
     }
 
     Index findIndex(String field) {
-        IndexMeta meta = indexMetadata.get(field);
+        IndexMeta meta = getIndexMetadata().get(field);
         if (meta != null) {
             return meta.index;
         }
@@ -77,7 +75,7 @@ class IndexMetaService {
     }
 
     NitriteMap<Comparable, ConcurrentSkipListSet<NitriteId>> getIndexMap(String field) {
-        IndexMeta meta = indexMetadata.get(field);
+        IndexMeta meta = getIndexMetadata().get(field);
         if (meta != null && meta.index != null) {
             return mvStore.openMap(meta.indexMap);
         }
@@ -85,34 +83,34 @@ class IndexMetaService {
     }
 
     void markDirty(String field) {
-        IndexMeta meta = indexMetadata.get(field);
+        IndexMeta meta = getIndexMetadata().get(field);
         if (meta != null && meta.index != null) {
             meta.isDirty.set(true);
         }
     }
 
     void unmarkDirty(String field) {
-        IndexMeta meta = indexMetadata.get(field);
+        IndexMeta meta = getIndexMetadata().get(field);
         if (meta != null && meta.index != null) {
             meta.isDirty.set(false);
         }
     }
 
     synchronized boolean isDirtyIndex(String field) {
-        IndexMeta meta = indexMetadata.get(field);
+        IndexMeta meta = getIndexMetadata().get(field);
         return meta != null && meta.isDirty.get();
     }
 
     Collection<Index> listIndexes() {
         Set<Index> indexSet = new LinkedHashSet<>();
-        for (IndexMeta indexMeta : indexMetadata.values()) {
+        for (IndexMeta indexMeta : getIndexMetadata().values()) {
             indexSet.add(indexMeta.index);
         }
         return Collections.unmodifiableSet(indexSet);
     }
 
     void dropIndex(String field) {
-        IndexMeta meta = indexMetadata.get(field);
+        IndexMeta meta = getIndexMetadata().get(field);
         if (meta != null && meta.index != null) {
             String indexMapName = meta.indexMap;
             mvStore.removeMap(mvStore.openMap(indexMapName));
@@ -120,14 +118,16 @@ class IndexMetaService {
             throw new IndexingException(errorMessage(
                     field + " is not indexed", IE_DROP_NON_EXISTING_INDEX));
         }
-        indexMetadata.remove(field);
+        getIndexMetadata().remove(field);
     }
 
     void dropAll() {
-        for (String field : indexMetadata.keySet()) {
-            dropIndex(field);
+        for (String field : getIndexMetadata().keySet()) {
+            if (field != null) {
+                dropIndex(field);
+            }
         }
-        mvStore.removeMap(indexMetadata);
+        mvStore.removeMap(getIndexMetadata());
     }
 
     Index createIndexMetadata(String field, IndexType indexType) {
@@ -138,22 +138,18 @@ class IndexMetaService {
         indexMeta.isDirty = new AtomicBoolean(false);
         indexMeta.indexMap = internalName(index);
 
-        indexMetadata.put(field, indexMeta);
+        getIndexMetadata().put(field, indexMeta);
 
         return index;
     }
 
-    synchronized Object getFieldLock(String field) {
-        Object lock = fieldLock.get(field);
-        if (lock != null) return lock;
-
-        lock = new Object();
-        fieldLock.put(field, lock);
-        return lock;
-    }
-
     private String getName() {
         return INDEX_META_PREFIX + INTERNAL_NAME_SEPARATOR + underlyingMap.getName();
+    }
+
+    private NitriteMap<String, IndexMeta> getIndexMetadata() {
+        String indexMetaName = getName();
+        return mvStore.openMap(indexMetaName);
     }
 
     @EqualsAndHashCode

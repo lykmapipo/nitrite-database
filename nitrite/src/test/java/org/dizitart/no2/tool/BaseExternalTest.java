@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.tool;
@@ -37,13 +39,13 @@ import static org.dizitart.no2.DbTestOperations.getRandomTempDbFile;
  * @author Anindya Chatterjee.
  */
 public abstract class BaseExternalTest {
-    ObjectRepository<Employee> sourceEmpRepo;
-    ObjectRepository<Company> sourceCompRepo;
-    NitriteCollection sourceFirstColl;
-    NitriteCollection sourceSecondColl;
-    Nitrite sourceDb;
-    Nitrite destDb;
-    String schemaFile;
+    protected ObjectRepository<Employee> sourceEmpRepo;
+    protected ObjectRepository<Company> sourceCompRepo;
+    protected NitriteCollection sourceFirstColl;
+    protected NitriteCollection sourceSecondColl;
+    protected Nitrite sourceDb;
+    protected Nitrite destDb;
+    protected String schemaFile;
     private String sourceDbFile;
     private String destDbFile;
 
@@ -82,7 +84,7 @@ public abstract class BaseExternalTest {
         Files.delete(Paths.get(schemaFile));
     }
 
-    List<Document> filter(List<Document> documents) {
+    protected List<Document> filter(List<Document> documents) {
         for(Document document : documents) {
             document.remove(DOC_REVISION);
             document.remove(DOC_MODIFIED);

@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,12 +13,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 apply plugin: 'java'
-apply plugin: 'io.codearte.nexus-staging'
 apply plugin: 'signing'
 apply plugin: 'maven'
+apply plugin: 'com.github.hauner.jarTest'
+
 apply from: 'jacoco.gradle'
 apply from: 'asciidoc.gradle'
 
@@ -38,6 +41,7 @@ dependencies {
     compile "com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion"
     compile "org.jasypt:jasypt:$jasyptVersion"
     compile "com.squareup.okhttp3:okhttp:$okhttpVersion"
+    compile "uk.co.jemos.podam:podam:$podamVersion"
 
     testCompile "junit:junit:$junitVersion"
     testCompile "org.apache.lucene:lucene-core:$luceneVersion"
@@ -80,7 +84,7 @@ artifacts {
 }
 
 signing {
-    required { project.hasProperty('release') }
+    required { gradle.taskGraph.hasTask("uploadArchives") }
     sign configurations.archives
 }
 
@@ -90,6 +94,10 @@ nexusStaging {
 }
 
 uploadArchives {
+    onlyIf {
+        project.hasProperty('release') || version.endsWith("SNAPSHOT")
+    }
+
     repositories {
         mavenDeployer {
             beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
@@ -97,6 +105,11 @@ uploadArchives {
             repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
                 authentication(userName: System.getenv('OSSRH_USER'),
                         password: System.getenv('OSSRH_PASSWORD'))
+            }
+
+            snapshotRepository(url: 'https://oss.sonatype.org/content/repositories/snapshots') {
+                authentication(userName: System.getenv('OSSRH_USER'),
+                    password: System.getenv('OSSRH_PASSWORD'))
             }
 
             pom.project {

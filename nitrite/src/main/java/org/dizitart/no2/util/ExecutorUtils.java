@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.util;
@@ -40,9 +42,9 @@ public class ExecutorUtils {
      * @return the {@link ExecutorService}.
      */
     public static ExecutorService daemonExecutor() {
-        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(10, 10,
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(0, Integer.MAX_VALUE,
                 60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<Runnable>(),
+                new SynchronousQueue<Runnable>(),
                 new ErrorAwareThreadFactory() {
                     @Override
                     public Thread createThread(Runnable runnable) {

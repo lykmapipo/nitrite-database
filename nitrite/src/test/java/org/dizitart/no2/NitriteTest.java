@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,10 +13,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
 
+import org.dizitart.no2.exceptions.NitriteIOException;
 import org.dizitart.no2.objects.ObjectRepository;
 import org.junit.After;
 import org.junit.Before;
@@ -31,8 +34,8 @@ import java.util.Locale;
 import java.util.Set;
 
 import static org.dizitart.no2.Constants.INTERNAL_NAME_SEPARATOR;
-import static org.dizitart.no2.Document.createDocument;
 import static org.dizitart.no2.DbTestOperations.getRandomTempDbFile;
+import static org.dizitart.no2.Document.createDocument;
 import static org.dizitart.no2.filters.Filters.ALL;
 import static org.junit.Assert.*;
 
@@ -236,5 +239,42 @@ public class NitriteTest {
         ObjectRepository<NitriteTest> repository = db.getRepository(NitriteTest.class);
         assertNotNull(repository);
         assertEquals(repository.getType(), NitriteTest.class);
+    }
+
+    @Test
+    public void testGetRepositoryWithKey() {
+        ObjectRepository<NitriteTest> repository = db.getRepository("key", NitriteTest.class);
+        assertNotNull(repository);
+        assertEquals(repository.getType(), NitriteTest.class);
+        assertFalse(db.hasRepository(NitriteTest.class));
+        assertTrue(db.hasRepository("key", NitriteTest.class));
+    }
+
+    @Test
+    public void testMultipleGetCollection() {
+        NitriteCollection collection = db.getCollection("test-collection");
+        assertNotNull(collection);
+        assertEquals(collection.getName(), "test-collection");
+
+        NitriteCollection collection2 = db.getCollection("test-collection");
+        assertNotNull(collection2);
+        assertEquals(collection2.getName(), "test-collection");
+    }
+
+    @Test
+    public void testMultipleGetRepository() {
+        ObjectRepository<NitriteTest> repository = db.getRepository(NitriteTest.class);
+        assertNotNull(repository);
+        assertEquals(repository.getType(), NitriteTest.class);
+
+        ObjectRepository<NitriteTest> repository2 = db.getRepository(NitriteTest.class);
+        assertNotNull(repository2);
+        assertEquals(repository2.getType(), NitriteTest.class);
+    }
+
+    @Test(expected = NitriteIOException.class)
+    public void testIssue112() {
+        Nitrite db = Nitrite.builder().filePath("/tmp").openOrCreate();
+        assertNull(db);
     }
 }

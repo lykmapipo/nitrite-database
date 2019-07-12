@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,15 +13,19 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * A JVM shutdown hook to close database properly before exiting for good.
  *
  * @author Anindya Chatterjee.
  */
+@Slf4j
 class NitriteShutDownHook extends Thread {
     private Nitrite db;
 
@@ -31,9 +36,14 @@ class NitriteShutDownHook extends Thread {
     @Override
     public void run() {
         if (db != null && !db.isClosed()) {
-            // close the db immediately and discards
-            // any unsaved changes to avoid corruption
-            db.closeImmediately();
+            try {
+                db.close();
+            } catch (Throwable t) {
+                // close the db immediately and discards
+                // any unsaved changes to avoid corruption
+                log.error("Error while database shutdown", t);
+                db.closeImmediately();
+            }
         }
     }
 }

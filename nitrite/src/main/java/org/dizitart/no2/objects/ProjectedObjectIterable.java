@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.objects;
@@ -19,7 +21,7 @@ package org.dizitart.no2.objects;
 import org.dizitart.no2.Document;
 import org.dizitart.no2.RecordIterable;
 import org.dizitart.no2.exceptions.InvalidOperationException;
-import org.dizitart.no2.internals.NitriteMapper;
+import org.dizitart.no2.mapper.NitriteMapper;
 import org.dizitart.no2.util.Iterables;
 
 import java.util.Iterator;
@@ -34,7 +36,6 @@ import static org.dizitart.no2.exceptions.ErrorMessage.OBJ_REMOVE_ON_PROJECTED_O
 class ProjectedObjectIterable<T> implements RecordIterable<T> {
     private RecordIterable<Document> recordIterable;
     private Class<T> projectionType;
-    private ProjectedObjectIterator iterator;
     private NitriteMapper nitriteMapper;
 
     ProjectedObjectIterable(NitriteMapper nitriteMapper,
@@ -43,12 +44,11 @@ class ProjectedObjectIterable<T> implements RecordIterable<T> {
         this.recordIterable = recordIterable;
         this.projectionType = projectionType;
         this.nitriteMapper = nitriteMapper;
-        this.iterator = new ProjectedObjectIterator(nitriteMapper);
     }
 
     @Override
     public Iterator<T> iterator() {
-        return iterator;
+        return new ProjectedObjectIterator(nitriteMapper);
     }
 
     @Override
@@ -68,22 +68,12 @@ class ProjectedObjectIterable<T> implements RecordIterable<T> {
 
     @Override
     public T firstOrDefault() {
-        T item = Iterables.firstOrDefault(this);
-        reset();
-        return item;
+        return Iterables.firstOrDefault(this);
     }
 
     @Override
     public List<T> toList() {
-        List<T> list = Iterables.toList(this);
-        reset();
-        return list;
-    }
-
-    @Override
-    public void reset() {
-        this.recordIterable.reset();
-        this.iterator = new ProjectedObjectIterator(nitriteMapper);
+        return Iterables.toList(this);
     }
 
     @Override
@@ -93,25 +83,21 @@ class ProjectedObjectIterable<T> implements RecordIterable<T> {
 
     private class ProjectedObjectIterator implements Iterator<T> {
         private NitriteMapper objectMapper;
+        private Iterator<Document> documentIterator;
 
         ProjectedObjectIterator(NitriteMapper nitriteMapper) {
             this.objectMapper = nitriteMapper;
+            this.documentIterator = recordIterable.iterator();
         }
 
         @Override
         public boolean hasNext() {
-            boolean hasNext = true;
-            try {
-                hasNext = recordIterable.iterator().hasNext();
-                return hasNext;
-            } finally {
-                if (!hasNext) reset();
-            }
+            return documentIterator.hasNext();
         }
 
         @Override
         public T next() {
-            Document record = new Document(recordIterable.iterator().next());
+            Document record = new Document(documentIterator.next());
             record.remove(DOC_ID);
             return objectMapper.asObject(record, projectionType);
         }

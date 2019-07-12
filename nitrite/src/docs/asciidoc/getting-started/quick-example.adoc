@@ -1,9 +1,16 @@
 [source,java]
 .Initialize Database
 --
+// java initialization
 Nitrite db = Nitrite.builder()
         .compressed()
         .filePath("/tmp/test.db")
+        .openOrCreate("user", "password");
+
+// android initialization
+Nitrite db = Nitrite.builder()
+        .compressed()
+        .filePath(getFilesDir().getPath() + "/test.db")
         .openOrCreate("user", "password");
 --
 
@@ -17,6 +24,9 @@ NitriteCollection collection = db.getCollection("test");
 
 // Create an Object Repository
 ObjectRepository<Employee> repository = db.getRepository(Employee.class);
+
+// Create an Object Repository with a key
+ObjectRepository<Employee> repository = db.getRepository("key", Employee.class);
 
 --
 

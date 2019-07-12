@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,16 +13,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
 
+import org.dizitart.no2.exceptions.InvalidOperationException;
+import org.dizitart.no2.exceptions.UniqueConstraintException;
+import org.dizitart.no2.filters.Filters;
 import org.junit.Test;
 
 import static org.dizitart.no2.Document.createDocument;
+import static org.dizitart.no2.IndexOptions.indexOptions;
 import static org.dizitart.no2.filters.Filters.eq;
 import static org.dizitart.no2.filters.Filters.not;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class CollectionUpdateTest extends BaseCollectionTest {
 
@@ -112,7 +118,26 @@ public class CollectionUpdateTest extends BaseCollectionTest {
     }
 
     @Test
-    public void testUpdateWithOptionsJustOnce() {
+    public void testUpdateMultipleWithJustOnceFalse() {
+        Cursor cursor = collection.find(eq("firstName", "fn1"));
+        assertEquals(cursor.size(), 0);
+
+        insert();
+
+        UpdateOptions updateOptions = new UpdateOptions();
+        updateOptions.setJustOnce(false);
+
+        Document document = createDocument("lastName", "newLastName1");
+        WriteResult updateResult = collection.update(not(eq("firstName", "fn1")),
+                document, updateOptions);
+        assertEquals(updateResult.getAffectedCount(), 2);
+
+        cursor = collection.find(eq("lastName", "newLastName1"));
+        assertEquals(cursor.size(), 2);
+    }
+
+    @Test(expected = InvalidOperationException.class)
+    public void testUpdateMultipleWithJustOnceTrue() {
         Cursor cursor = collection.find(eq("firstName", "fn1"));
         assertEquals(cursor.size(), 0);
 
@@ -122,12 +147,8 @@ public class CollectionUpdateTest extends BaseCollectionTest {
         updateOptions.setJustOnce(true);
 
         Document document = createDocument("lastName", "newLastName1");
-        WriteResult updateResult = collection.update(not(eq("firstName", "fn1")),
-                document, updateOptions);
-        assertEquals(updateResult.getAffectedCount(), 1);
-
-        cursor = collection.find(eq("lastName", "newLastName1"));
-        assertEquals(cursor.size(), 1);
+        collection.update(not(eq("firstName", "fn1")),
+            document, updateOptions);
     }
 
     @Test
@@ -165,5 +186,47 @@ public class CollectionUpdateTest extends BaseCollectionTest {
         WriteResult updateResult = collection.update(eq("some-value", "some-value"),
                 createDocument("lastName", "new-last-name"));
         assertEquals(updateResult.getAffectedCount(), 0);
+    }
+
+    @Test
+    public void updateAfterAttributeRemoval() {
+        NitriteCollection coll = db.getCollection("test_updateAfterAttributeRemoval");
+        coll.remove(Filters.ALL);
+
+        Document doc = new Document().put("id", "test-1").put("group", "groupA");
+        assertEquals(1, coll.insert(doc).getAffectedCount());
+
+        Document savedDoc1 = coll.find().firstOrDefault();
+        assertNotNull(savedDoc1);
+
+        Document clonedDoc1 = new Document(savedDoc1);
+        assertEquals(savedDoc1, clonedDoc1);
+
+        clonedDoc1.put("group", null);
+//        clonedDoc1.remove("group");
+        assertEquals(1, coll.update(clonedDoc1).getAffectedCount());
+
+        Document savedDoc2 = coll.find(Filters.ALL).firstOrDefault();
+        assertNotNull(savedDoc2);
+        assertNull(savedDoc2.get("group"));
+    }
+
+    @Test(expected = UniqueConstraintException.class)
+    public void testIssue151() {
+        Document doc1 = new Document().put("id", "test-1").put("fruit", "Apple");
+        Document doc2 = new Document().put("id", "test-2").put("fruit", "Ôrange");
+        NitriteCollection coll = db.getCollection("test");
+        coll.insert(doc1, doc2);
+
+        coll.createIndex("fruit", indexOptions(IndexType.Unique));
+
+        assertEquals(coll.find(eq("fruit", "Apple")).totalCount(), 1);
+
+        Document doc3 = coll.find(eq("id", "test-2")).firstOrDefault();
+
+        doc3.put("fruit", "Apple");
+        coll.update(doc3);
+
+        assertEquals(coll.find(eq("fruit", "Apple")).totalCount(), 1);
     }
 }

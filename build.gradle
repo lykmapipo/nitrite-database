@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 import io.franzbecker.gradle.lombok.task.DelombokTask
@@ -21,31 +23,29 @@ buildscript {
         jcenter()
         mavenCentral()
         mavenLocal()
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
     }
     dependencies {
         classpath "io.franzbecker:gradle-lombok:$lombokPluginVersion"
         classpath "org.asciidoctor:asciidoctor-gradle-plugin:$asciidoctorPluginVersion"
         classpath "net.ltgt.gradle:gradle-errorprone-plugin:$errorPronePluginVersion"
-	classpath "com.github.jengelman.gradle.plugins:shadow:$shadowPluginVersion"
+        classpath "com.github.jengelman.gradle.plugins:shadow:$shadowPluginVersion"
         classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:$nexusStagingPlugin"
+        classpath "com.adarshr:gradle-test-logger-plugin:$testLoggerPluginVersion"
+        classpath "gradle.plugin.gradle-plugins:jartest:$jarTestVersion"
     }
-}
-
-plugins {
-    id 'com.gradle.build-scan' version '1.0'
-}
-
-buildScan {
-    licenseAgreementUrl = 'https://gradle.com/terms-of-service'
-    licenseAgree = 'yes'
 }
 
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'net.ltgt.errorprone'
+apply plugin: 'io.codearte.nexus-staging'
 
 subprojects {
     apply plugin: 'io.franzbecker.gradle-lombok'
+    apply plugin: 'com.adarshr.test-logger'
 
     group = 'org.dizitart'
     version = "$nitriteVersion"
@@ -55,9 +55,13 @@ subprojects {
         sha256 = ""
     }
 
+    testlogger {
+        theme 'mocha'
+        showExceptions true
+    }
+
     repositories {
         mavenCentral()
-        maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
         mavenLocal()
     }
 
@@ -72,4 +76,8 @@ task clean(type: Delete) {
 
 configurations.errorprone {
     resolutionStrategy.force 'com.google.errorprone:error_prone_core:$errorProneVersion'
+}
+
+nexusStaging {
+    packageGroup = "org.dizitart"
 }

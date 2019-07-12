@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,12 +13,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
 
 import lombok.Getter;
 import lombok.experimental.NonFinal;
+
+import java.text.Collator;
 
 /**
  * Represents the options to specify during a find operation on a collection.
@@ -73,8 +77,21 @@ public class FindOptions {
      *
      * @return the sort order.
      * */
-    @Getter @NonFinal private SortOrder sortOrder;
+    @Getter @NonFinal private SortOrder sortOrder = SortOrder.Ascending;
 
+    /**
+     * Gets the `null` values order of the find result.
+     *
+     * @return the `null` values order.
+     * */
+    @Getter @NonFinal private NullOrder nullOrder = NullOrder.Default;
+
+    /**
+     * Gets the collator instance for sorting of {@link String}.
+     *
+     * @return the collator.
+     * */
+    @Getter @NonFinal private Collator collator;
 
     /**
      * Instantiates a new find options with pagination criteria.
@@ -99,6 +116,47 @@ public class FindOptions {
     }
 
     /**
+     * Instantiates a new find options with sorting criteria.
+     *
+     * @param field     the value to sort by.
+     * @param sortOrder the sort order.
+     * @param collator  the collator.
+     */
+    public FindOptions(String field, SortOrder sortOrder, Collator collator) {
+        this.field = field;
+        this.sortOrder = sortOrder;
+        this.collator = collator;
+    }
+
+    /**
+     * Instantiates a new find options with sorting criteria and `null` value order.
+     *
+     * @param field     the value to sort by.
+     * @param sortOrder the sort order.
+     * @param nullOrder the `null` value order.
+     */
+    public FindOptions(String field, SortOrder sortOrder, NullOrder nullOrder) {
+        this.field = field;
+        this.sortOrder = sortOrder;
+        this.nullOrder = nullOrder;
+    }
+
+    /**
+     * Instantiates a new find options with sorting criteria and `null` value order.
+     *
+     * @param field     the value to sort by.
+     * @param sortOrder the sort order.
+     * @param nullOrder the `null` value order.
+     * @param collator  the collator.
+     */
+    public FindOptions(String field, SortOrder sortOrder, Collator collator, NullOrder nullOrder) {
+        this.field = field;
+        this.sortOrder = sortOrder;
+        this.nullOrder = nullOrder;
+        this.collator = collator;
+    }
+
+    /**
      * Creates a find options with pagination criteria.
      *
      * @param offset the pagination offset.
@@ -118,6 +176,43 @@ public class FindOptions {
      */
     public static FindOptions sort(String field, SortOrder sortOrder) {
         return new FindOptions(field, sortOrder);
+    }
+
+    /**
+     * Creates a find options with sorting criteria.
+     *
+     * @param field     the value to sort by.
+     * @param sortOrder the sort order.
+     * @param collator  the collator.
+     * @return the find options with sorting criteria.
+     */
+    public static FindOptions sort(String field, SortOrder sortOrder, Collator collator) {
+        return new FindOptions(field, sortOrder, collator);
+    }
+
+    /**
+     * Creates a find options with sorting criteria.
+     *
+     * @param field     the value to sort by.
+     * @param sortOrder the sort order.
+     * @param nullOrder the `null` value order.
+     * @return the find options with sorting criteria.
+     */
+    public static FindOptions sort(String field, SortOrder sortOrder, NullOrder nullOrder) {
+        return new FindOptions(field, sortOrder, nullOrder);
+    }
+
+    /**
+     * Creates a find options with sorting criteria.
+     *
+     * @param field     the value to sort by.
+     * @param sortOrder the sort order.
+     * @param nullOrder the `null` value order.
+     * @param collator  the collator.
+     * @return the find options with sorting criteria.
+     */
+    public static FindOptions sort(String field, SortOrder sortOrder, Collator collator, NullOrder nullOrder) {
+        return new FindOptions(field, sortOrder, collator, nullOrder);
     }
 
     /**

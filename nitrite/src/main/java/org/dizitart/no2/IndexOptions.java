@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
@@ -29,10 +31,10 @@ import lombok.Setter;
 public class IndexOptions {
 
     /**
-     * Specifies the type of an index to createId.
+     * Specifies the type of an index to create.
      *
      * @param indexType type of an index.
-     * @returns type of an index to createId.
+     * @returns type of an index to create.
      * */
     @Getter @Setter
     private IndexType indexType;
@@ -42,7 +44,7 @@ public class IndexOptions {
      * way.
      *
      * @param async if set to `true` then the index will be created asynchronously;
-     *              otherwise createId index operation will wait until all existing
+     *              otherwise create index operation will wait until all existing
      *              documents are indexed.
      * @returns `true` if index is to be created asynchronously; otherwise `false`.
      * @see NitriteCollection#createIndex(String, IndexOptions)

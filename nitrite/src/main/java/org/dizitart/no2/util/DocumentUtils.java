@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.util;
@@ -21,7 +23,9 @@ import org.dizitart.no2.Document;
 import org.dizitart.no2.Filter;
 import org.dizitart.no2.KeyValuePair;
 import org.dizitart.no2.exceptions.ValidationException;
-import org.dizitart.no2.internals.NitriteMapper;
+import org.dizitart.no2.mapper.NitriteMapper;
+import uk.co.jemos.podam.api.PodamFactory;
+import uk.co.jemos.podam.api.PodamFactoryImpl;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
@@ -34,7 +38,6 @@ import static org.dizitart.no2.Constants.DOC_ID;
 import static org.dizitart.no2.exceptions.ErrorCodes.*;
 import static org.dizitart.no2.exceptions.ErrorMessage.*;
 import static org.dizitart.no2.filters.Filters.eq;
-import static org.dizitart.no2.util.ObjectUtils.newInstance;
 import static org.dizitart.no2.util.StringUtils.isNullOrEmpty;
 
 /**
@@ -49,6 +52,8 @@ public class DocumentUtils {
      * Field separator.
      * */
     static String FIELD_SEPARATOR = ".";
+
+    private static PodamFactory factory = new PodamFactoryImpl();
 
     /**
      * Gets all first level fields of a document.
@@ -82,7 +87,7 @@ public class DocumentUtils {
      * are initialized to `null`. Such empty document is used for projection purpose.
      *
      * @param <T>           the type parameter
-     * @param nitriteMapper the {@link NitriteMapper} to createId the document.
+     * @param nitriteMapper the {@link NitriteMapper} to create the document.
      * @param type          the class definition.
      * @return the empty document
      */
@@ -131,7 +136,7 @@ public class DocumentUtils {
     }
 
     static <T> Document dummyDocument(NitriteMapper nitriteMapper, Class<T> type) {
-        T dummy = newInstance(type);
+        T dummy = factory.manufacturePojo(type);
         return nitriteMapper.asDocument(dummy);
     }
 

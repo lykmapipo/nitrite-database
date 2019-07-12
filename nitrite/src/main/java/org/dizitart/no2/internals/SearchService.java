@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.internals;
@@ -21,6 +23,7 @@ import org.dizitart.no2.exceptions.FilterException;
 import org.dizitart.no2.exceptions.InvalidOperationException;
 import org.dizitart.no2.store.NitriteMap;
 
+import java.text.Collator;
 import java.util.*;
 
 import static org.dizitart.no2.exceptions.ErrorCodes.VE_SEARCH_SERVICE_NULL_NITRITE_SERVICE;
@@ -54,6 +57,9 @@ class SearchService {
     }
 
     Cursor find(Filter filter) {
+        if (filter == null) {
+            return find();
+        }
         filter.setNitriteService(nitriteService);
         Set<NitriteId> result;
 
@@ -85,6 +91,9 @@ class SearchService {
     }
 
     Cursor find(Filter filter, FindOptions findOptions) {
+        if (filter == null) {
+            return find(findOptions);
+        }
         filter.setNitriteService(nitriteService);
         FindResult findResult = new FindResult();
         findResult.setUnderlyingMap(underlyingMap);
@@ -134,9 +143,18 @@ class SearchService {
         findResult.setTotalCount(nitriteIdSet.size());
     }
 
-    private Set<NitriteId> sortIdSet(Set<NitriteId> nitriteIdSet, FindOptions findOptions) {
+    private Set<NitriteId> sortIdSet(Collection<NitriteId> nitriteIdSet, FindOptions findOptions) {
         String sortField = findOptions.getField();
-        NavigableMap<Object, NitriteId> sortedMap = new TreeMap<>();
+        Collator collator = findOptions.getCollator();
+
+        NavigableMap<Object, List<NitriteId>> sortedMap;
+        if (collator != null) {
+            sortedMap = new TreeMap<>(collator);
+        } else {
+            sortedMap = new TreeMap<>();
+        }
+
+        Set<NitriteId> nullValueIds = new HashSet<>();
 
         for (NitriteId id : nitriteIdSet) {
             Document document = underlyingMap.get(id);
@@ -146,15 +164,39 @@ class SearchService {
                 if (value.getClass().isArray() || value instanceof Iterable) {
                     throw new InvalidOperationException(UNABLE_TO_SORT_ON_ARRAY);
                 }
-                sortedMap.put(value, id);
+            } else {
+                nullValueIds.add(id);
+                continue;
+            }
+
+            if (sortedMap.containsKey(value)) {
+                List<NitriteId> idList = sortedMap.get(value);
+                idList.add(id);
+                sortedMap.put(value, idList);
+            } else {
+                List<NitriteId> idList = new ArrayList<>();
+                idList.add(id);
+                sortedMap.put(value, idList);
             }
         }
 
-        Collection<NitriteId> sortedValues;
+        List<NitriteId> sortedValues;
         if (findOptions.getSortOrder() == SortOrder.Ascending) {
-            sortedValues = sortedMap.values();
+            if (findOptions.getNullOrder() == NullOrder.Default || findOptions.getNullOrder() == NullOrder.First) {
+                sortedValues = new ArrayList<>(nullValueIds);
+                sortedValues.addAll(flattenList(sortedMap.values()));
+            } else {
+                sortedValues = flattenList(sortedMap.values());
+                sortedValues.addAll(nullValueIds);
+            }
         } else {
-            sortedValues = sortedMap.descendingMap().values();
+            if (findOptions.getNullOrder() == NullOrder.Default || findOptions.getNullOrder() == NullOrder.Last) {
+                sortedValues = flattenList(sortedMap.descendingMap().values());
+                sortedValues.addAll(nullValueIds);
+            } else {
+                sortedValues = new ArrayList<>(nullValueIds);
+                sortedValues.addAll(flattenList(sortedMap.descendingMap().values()));
+            }
         }
 
         return limitIdSet(sortedValues, findOptions);
@@ -175,5 +217,13 @@ class SearchService {
         }
 
         return resultSet;
+    }
+
+    private <T> List<T> flattenList(Collection<List<T>> collection) {
+        List<T> finalList = new ArrayList<>();
+        for (List<T> list : collection) {
+            finalList.addAll(list);
+        }
+        return finalList;
     }
 }

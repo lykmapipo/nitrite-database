@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.exceptions;
@@ -231,6 +233,14 @@ public class ErrorMessage {
             new ErrorMessage("id value can not be empty string",
                     IIE_ID_VALUE_EMPTY_STRING);
 
+    public static final ErrorMessage CANNOT_ACCESS_AUTO_ID =
+            new ErrorMessage("auto generated id value can not be accessed",
+                    IIE_CANNOT_ACCESS_AUTO_ID);
+
+    public static final ErrorMessage AUTO_ID_ALREADY_SET =
+            new ErrorMessage("auto generated id should not be set manually",
+                    IIE_AUTO_ID_ALREADY_SET);
+
     public static final ErrorMessage PAGINATION_SIZE_CAN_NOT_BE_NEGATIVE =
             new ErrorMessage("pagination size can not be negative",
                     VE_NEGATIVE_PAGINATION_SIZE);
@@ -283,6 +293,10 @@ public class ErrorMessage {
             new ErrorMessage("type can not be null",
                     VE_INVALID_EMBEDDED_FIELD);
 
+    public static final ErrorMessage PROJECTION_WITH_NOT_NULL_VALUES =
+            new ErrorMessage("projection contains not null values",
+                    VE_PROJECTION_WITH_NOT_NULL_VALUE);
+
     public static final ErrorMessage UNABLE_TO_CREATE_IN_MEMORY_READONLY_DB =
             new ErrorMessage("unable create readonly in-memory database",
                     IOE_IN_MEMORY_READONLY_DB);
@@ -307,9 +321,17 @@ public class ErrorMessage {
             new ErrorMessage("remove on cursor is not supported",
                     IOE_OBJ_REMOVE_PROJECTED_OBJECT_ITERATOR);
 
+    public static final ErrorMessage OBJ_REMOVE_ON_JOINED_OBJECT_ITERATOR_NOT_SUPPORTED =
+            new ErrorMessage("remove on cursor is not supported",
+                    IOE_OBJ_REMOVE_JOINED_OBJECT_ITERATOR);
+
     public static final ErrorMessage REPLICATOR_ALREADY_RUNNING =
             new ErrorMessage("replicator is already running",
                     IOE_REPLICATOR_RUNNING);
+
+    public static final ErrorMessage OBJ_MULTI_UPDATE_WITH_JUST_ONCE =
+            new ErrorMessage("cannot update multiple items as justOnce is set to true",
+                    IOE_OBJ_MULTI_UPDATE_WITH_JUST_ONCE);
 
     public static final ErrorMessage REMOVE_FAILED_AS_NO_ID_FOUND =
             new ErrorMessage("remove operation failed as no id value found for the document",

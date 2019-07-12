@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.store;
@@ -19,10 +21,7 @@ package org.dizitart.no2.store;
 import org.dizitart.no2.meta.Attributes;
 import org.h2.mvstore.MVMap;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.dizitart.no2.Constants.META_MAP_NAME;
 import static org.dizitart.no2.util.StringUtils.isNullOrEmpty;
@@ -34,8 +33,8 @@ import static org.dizitart.no2.util.StringUtils.isNullOrEmpty;
  * @author Anindya Chatterjee.
  */
 class NitriteMVMap<Key, Value> implements NitriteMap<Key, Value> {
-    private MVMap<Key, Value> mvMap;
-    private NitriteStore nitriteStore;
+    private final MVMap<Key, Value> mvMap;
+    private final NitriteStore nitriteStore;
 
     NitriteMVMap(MVMap<Key, Value> mvMap, NitriteStore nitriteStore) {
         this.mvMap = mvMap;
@@ -171,10 +170,9 @@ class NitriteMVMap<Key, Value> implements NitriteMap<Key, Value> {
             Attributes attributes = metaMap.get(getName());
             if (attributes == null) {
                 attributes = new Attributes(getName());
-            } else {
-                attributes.setLastModifiedTime(System.currentTimeMillis());
+                metaMap.put(getName(), attributes);
             }
-            metaMap.put(getName(), attributes);
+            attributes.setLastModifiedTime(System.currentTimeMillis());
         }
     }
 }

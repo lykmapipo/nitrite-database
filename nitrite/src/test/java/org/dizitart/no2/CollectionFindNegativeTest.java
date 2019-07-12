@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
@@ -19,8 +21,13 @@ package org.dizitart.no2;
 import org.dizitart.no2.exceptions.FilterException;
 import org.dizitart.no2.exceptions.InvalidOperationException;
 import org.dizitart.no2.exceptions.ValidationException;
+import org.dizitart.no2.filters.Filters;
 import org.junit.Test;
 
+import java.util.Date;
+import java.util.Set;
+
+import static org.dizitart.no2.Document.createDocument;
 import static org.dizitart.no2.FindOptions.limit;
 import static org.dizitart.no2.FindOptions.sort;
 import static org.dizitart.no2.filters.Filters.*;
@@ -77,5 +84,33 @@ public class CollectionFindNegativeTest extends BaseCollectionTest {
         insert();
         Cursor cursor = collection.find(regex("birthDay", "hello"));
         assertEquals(cursor.size(), 1);
+    }
+
+    @Test(expected = ValidationException.class)
+    public void testInvalidProjection() {
+        insert();
+        Cursor cursor = collection.find(lte("birthDay", new Date()),
+                sort("firstName", SortOrder.Ascending).thenLimit(0, 3));
+
+        Document projection = createDocument("firstName", null)
+                .put("lastName", "ln2");
+
+        cursor.project(projection);
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testIdSetAdd() {
+        insert();
+        Cursor cursor = collection.find(Filters.eq("lastName", "ln2"));
+        Set<NitriteId> nitriteIds = cursor.idSet();
+        nitriteIds.add(NitriteId.newId());
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testIdSetRemove() {
+        insert();
+        Cursor cursor = collection.find(Filters.eq("lastName", "ln2"));
+        Set<NitriteId> nitriteIds = cursor.idSet();
+        nitriteIds.clear();
     }
 }

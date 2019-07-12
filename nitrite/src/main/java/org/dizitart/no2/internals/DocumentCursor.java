@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,18 +13,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.internals;
 
 import org.dizitart.no2.*;
+import org.dizitart.no2.exceptions.InvalidOperationException;
+import org.dizitart.no2.exceptions.ValidationException;
 import org.dizitart.no2.store.NitriteMap;
 import org.dizitart.no2.util.Iterables;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
+
+import static org.dizitart.no2.exceptions.ErrorMessage.PROJECTION_WITH_NOT_NULL_VALUES;
+import static org.dizitart.no2.exceptions.ErrorMessage.REMOVE_ON_DOCUMENT_ITERATOR_NOT_SUPPORTED;
 
 /**
  * @author Anindya Chatterjee.
@@ -33,30 +37,39 @@ class DocumentCursor implements Cursor {
     private final NitriteMap<NitriteId, Document> underlyingMap;
     private boolean hasMore;
     private int totalCount;
-    private Iterator<Document> documentIterator;
     private FindResult findResult;
 
     DocumentCursor(FindResult findResult) {
         if (findResult.getIdSet() != null) {
-            resultSet = findResult.getIdSet();
+            resultSet = Collections.unmodifiableSet(findResult.getIdSet());
         } else {
-            resultSet = new TreeSet<>();
+            resultSet = Collections.unmodifiableSet(new TreeSet<NitriteId>());
         }
         this.underlyingMap = findResult.getUnderlyingMap();
         this.hasMore = findResult.isHasMore();
         this.totalCount = findResult.getTotalCount();
-        this.documentIterator = new DocumentCursorIterator(this);
         this.findResult = findResult;
     }
 
     @Override
     public RecordIterable<Document> project(Document projection) {
+        validateProjection(projection);
         return new ProjectedDocumentIterable(projection, findResult);
     }
 
     @Override
+    public RecordIterable<Document> join(Cursor cursor, Lookup lookup) {
+        return new JoinedDocumentIterable(findResult, cursor, lookup);
+    }
+
+    @Override
+    public Set<NitriteId> idSet() {
+        return resultSet;
+    }
+
+    @Override
     public Iterator<Document> iterator() {
-        return documentIterator;
+        return new DocumentCursorIterator();
     }
 
     @Override
@@ -76,44 +89,55 @@ class DocumentCursor implements Cursor {
 
     @Override
     public Document firstOrDefault() {
-        Document item = Iterables.firstOrDefault(this);
-        reset();
-        return item;
+        return Iterables.firstOrDefault(this);
     }
 
     @Override
     public List<Document> toList() {
-        List<Document> list = Iterables.toList(this);
-        reset();
-        return list;
+        return Iterables.toList(this);
     }
 
-    @Override
-    public void reset() {
-        this.documentIterator = new DocumentCursorIterator(this);
-    }
-
-    private class DocumentCursorIterator extends DocumentIterator {
+    private class DocumentCursorIterator implements Iterator<Document> {
         private Iterator<NitriteId> iterator;
 
-        DocumentCursorIterator(Resettable<Document> resettable) {
-            super(resettable);
+        DocumentCursorIterator() {
             iterator = resultSet.iterator();
-            nextMatch();
         }
 
         @Override
-        void nextMatch() {
-            while (iterator.hasNext()) {
-                NitriteId next = iterator.next();
-                Document document = underlyingMap.get(next);
-                if (document != null) {
-                    nextElement = document;
-                    return;
-                }
-            }
+        public boolean hasNext() {
+            return iterator.hasNext();
+        }
 
-            nextElement = null;
+        @Override
+        public Document next() {
+            NitriteId next = iterator.next();
+            Document document = underlyingMap.get(next);
+            if (document != null) {
+                return new Document(document);
+            }
+            return null;
+        }
+
+        @Override
+        public void remove() {
+            throw new InvalidOperationException(REMOVE_ON_DOCUMENT_ITERATOR_NOT_SUPPORTED);
+        }
+    }
+
+    private void validateProjection(Document projection) {
+        for (KeyValuePair kvp : projection) {
+            validateKeyValuePair(kvp);
+        }
+    }
+
+    private void validateKeyValuePair(KeyValuePair kvp) {
+        if (kvp.getValue() != null) {
+            if (!(kvp.getValue() instanceof Document)) {
+                throw new ValidationException(PROJECTION_WITH_NOT_NULL_VALUES);
+            } else {
+                validateProjection((Document) kvp.getValue());
+            }
         }
     }
 }

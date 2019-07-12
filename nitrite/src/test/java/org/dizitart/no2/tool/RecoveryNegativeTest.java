@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.tool;
@@ -27,6 +29,7 @@ import java.nio.file.Paths;
 
 import static org.dizitart.no2.DbTestOperations.getRandomTempDbFile;
 import static org.dizitart.no2.tool.Recovery.recover;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 /**
@@ -43,7 +46,7 @@ public class RecoveryNegativeTest {
             raf.setLength(raf.length() + 100);
             raf.close();
 
-            recover(fileName);
+            assertFalse(recover(fileName));
         } else {
             fail("failed to create file");
         }

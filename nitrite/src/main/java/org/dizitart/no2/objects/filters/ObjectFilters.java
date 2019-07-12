@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.objects.filters;
@@ -121,7 +123,7 @@ public class ObjectFilters {
 
     /**
      * Creates a greater than filter which matches those objects where the value
-     * of the value is greater than (i.e. >) the specified value.
+     * of the field is greater than (i.e. >) the specified value.
      *
      * [[app-listing]]
      * [source,java]
@@ -141,7 +143,7 @@ public class ObjectFilters {
 
     /**
      * Creates a greater equal filter which matches those objects where the value
-     * of the value is greater than or equals to (i.e. >=) the specified value.
+     * of the field is greater than or equals to (i.e. >=) the specified value.
      *
      * [[app-listing]]
      * [source,java]
@@ -161,7 +163,7 @@ public class ObjectFilters {
 
     /**
      * Creates a lesser than filter which matches those objects where the value
-     * of the value is less than (i.e. <) the specified value.
+     * of the field is less than (i.e. <) the specified value.
      *
      * [[app-listing]]
      * [source,java]
@@ -181,7 +183,7 @@ public class ObjectFilters {
 
     /**
      * Creates a lesser equal filter which matches those objects where the value
-     * of the value is lesser than or equals to (i.e. <=) the specified value.
+     * of the field is lesser than or equals to (i.e. <=) the specified value.
      *
      * [[app-listing]]
      * [source,java]

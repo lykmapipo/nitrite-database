@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.internals;
@@ -47,6 +49,8 @@ class IndexingService {
     private final ExecutorService rebuildExecutor;
     private final TextIndexingService textIndexingService;
 
+    private final Object indexLock = new Object();
+
     IndexingService(IndexMetaService indexMetaService,
                     TextIndexingService textIndexingService,
                     NitriteContext nitriteContext) {
@@ -61,11 +65,9 @@ class IndexingService {
     void createIndex(String field, IndexType indexType, boolean isAsync) {
         Index index;
 
-        // synchronize on value only
-        Object fieldLock = indexMetaService.getFieldLock(field);
-        synchronized (fieldLock) {
+        synchronized (indexLock) {
             if (!indexMetaService.hasIndex(field)) {
-                // if no index createId index
+                // if no index create index
                 index = indexMetaService.createIndexMetadata(field, indexType);
             } else {
                 // if index already there throw
@@ -94,32 +96,32 @@ class IndexingService {
                 validateDocumentIndexField(fieldValue, field);
 
                 // if dirty index and currently indexing is not running, rebuild
-                if (indexMetaService.isDirtyIndex(field) &&
-                        indexBuildRegistry.get(field) != null
+                if (indexMetaService.isDirtyIndex(field)
+                        && indexBuildRegistry.get(field) != null
                         && !indexBuildRegistry.get(field).get()) {
                     // rebuild will also take care of the current document
                     rebuildIndex(index, true);
                 } else {
                     IndexType indexType = index.getIndexType();
-                    Object fieldLock = indexMetaService.getFieldLock(field);
 
                     if (indexType == IndexType.Fulltext && fieldValue instanceof String) {
                         // update text index
                         textIndexingService.updateIndex(nitriteId, field, (String) fieldValue);
                     } else {
-                        NitriteMap<Comparable, ConcurrentSkipListSet<NitriteId>> indexMap
-                                = indexMetaService.getIndexMap(field);
+                        synchronized (indexLock) {
+                            NitriteMap<Comparable, ConcurrentSkipListSet<NitriteId>> indexMap
+                                    = indexMetaService.getIndexMap(field);
 
-                        // createId the nitriteId list associated with the value
-                        ConcurrentSkipListSet<NitriteId> nitriteIdList
-                                = indexMap.get((Comparable) fieldValue);
+                            // create the nitriteId list associated with the value
+                            ConcurrentSkipListSet<NitriteId> nitriteIdList
+                                    = indexMap.get((Comparable) fieldValue);
 
-                        synchronized (fieldLock) {
                             if (nitriteIdList == null) {
                                 nitriteIdList = new ConcurrentSkipListSet<>();
                             }
 
-                            if (indexType == IndexType.Unique && nitriteIdList.size() == 1) {
+                            if (indexType == IndexType.Unique && nitriteIdList.size() == 1
+                                    && !nitriteIdList.contains(nitriteId)) {
                                 // if key is already exists for unique type, throw error
                                 throw new UniqueConstraintException(errorMessage(
                                         "unique key constraint violation for " + field,
@@ -147,7 +149,9 @@ class IndexingService {
                 if (fieldValue == null) continue;
 
                 // if dirty index and currently indexing is not running, rebuild
-                if (indexMetaService.isDirtyIndex(field) && !indexBuildRegistry.get(field).get()) {
+                if (indexMetaService.isDirtyIndex(field)
+                        && indexBuildRegistry.get(field) != null
+                        && !indexBuildRegistry.get(field).get()) {
                     // rebuild will also take care of the current document
                     rebuildIndex(index, true);
                 } else {
@@ -159,12 +163,86 @@ class IndexingService {
                         NitriteMap<Comparable, ConcurrentSkipListSet<NitriteId>> indexMap
                                 = indexMetaService.getIndexMap(field);
 
-                        // createId the nitriteId list associated with the value
+                        // create the nitrite list associated with the value
                         if (fieldValue instanceof Comparable) {
                             ConcurrentSkipListSet<NitriteId> nitriteIdList = indexMap.get((Comparable) fieldValue);
                             if (nitriteIdList != null) {
                                 nitriteIdList.remove(nitriteId);
-                                indexMap.put((Comparable) fieldValue, nitriteIdList);
+                                if (nitriteIdList.size() == 0) {
+                                    indexMap.remove((Comparable) fieldValue);
+                                } else {
+                                    indexMap.put((Comparable) fieldValue, nitriteIdList);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @SuppressWarnings({"unchecked", "ConstantConditions"})
+    void refreshIndexEntry(Document oldDocument, Document newDocument, NitriteId nitriteId) {
+        Set<String> fields = getFields(newDocument);
+
+        for (String field : fields) {
+            Index index = indexMetaService.findIndex(field);
+            if (index != null) {
+                Object newValue = getFieldValue(newDocument, field);
+                Object oldValue = getFieldValue(oldDocument, field);
+
+                if (newValue == null) continue;
+                if (newValue instanceof Comparable && oldValue instanceof Comparable) {
+                    if (((Comparable) newValue).compareTo(oldValue) == 0) continue;
+                }
+
+                validateDocumentIndexField(newValue, field);
+
+                // if dirty index and currently indexing is not running, rebuild
+                if (indexMetaService.isDirtyIndex(field) &&
+                        indexBuildRegistry.get(field) != null
+                        && !indexBuildRegistry.get(field).get()) {
+                    // rebuild will also take care of the current document
+                    rebuildIndex(index, true);
+                } else {
+                    IndexType indexType = index.getIndexType();
+
+                    if (indexType == IndexType.Fulltext && newValue instanceof String) {
+                        // update text index
+                        textIndexingService.updateIndex(nitriteId, field, (String) newValue);
+                    } else {
+                        synchronized (indexLock) {
+                            NitriteMap<Comparable, ConcurrentSkipListSet<NitriteId>> indexMap
+                                    = indexMetaService.getIndexMap(field);
+
+                            // create the nitriteId list associated with the value
+                            ConcurrentSkipListSet<NitriteId> nitriteIdList
+                                    = indexMap.get((Comparable) newValue);
+
+                            if (nitriteIdList == null) {
+                                nitriteIdList = new ConcurrentSkipListSet<>();
+                            }
+
+                            if (indexType == IndexType.Unique && nitriteIdList.size() == 1
+                                    && !nitriteIdList.contains(nitriteId)) {
+                                // if key is already exists for unique type, throw error
+                                throw new UniqueConstraintException(errorMessage(
+                                        "unique key constraint violation for " + field,
+                                        UCE_REFRESH_INDEX_CONSTRAINT_VIOLATED));
+                            }
+
+                            // add the nitriteId to the list
+                            nitriteIdList.add(nitriteId);
+                            indexMap.put((Comparable) newValue, nitriteIdList);
+
+                            nitriteIdList = indexMap.get((Comparable) oldValue);
+                            if (nitriteIdList != null && !nitriteIdList.isEmpty()) {
+                                nitriteIdList.remove(nitriteId);
+                                if (nitriteIdList.size() == 0) {
+                                    indexMap.remove((Comparable) oldValue);
+                                } else {
+                                    indexMap.put((Comparable) oldValue, nitriteIdList);
+                                }
                             }
                         }
                     }
@@ -243,7 +321,7 @@ class IndexingService {
             indexMetaService.markDirty(field);
 
             if (index.getIndexType() != IndexType.Fulltext) {
-                // createId index map
+                // create index map
                 NitriteMap<Comparable, ConcurrentSkipListSet<NitriteId>> indexMap
                         = indexMetaService.getIndexMap(field);
 
@@ -251,7 +329,7 @@ class IndexingService {
                 indexMap.clear();
 
                 for (Map.Entry<NitriteId, Document> entry : underlyingMap.entrySet()) {
-                    // createId the document
+                    // create the document
                     Document object = entry.getValue();
 
                     // retrieved the value from document
@@ -260,7 +338,7 @@ class IndexingService {
                     if (fieldValue == null) continue;
                     validateDocumentIndexField(fieldValue, field);
 
-                    // createId the id list associated with the value
+                    // create the id list associated with the value
                     ConcurrentSkipListSet<NitriteId> nitriteIdList = indexMap.get((Comparable) fieldValue);
                     if (nitriteIdList == null) {
                         nitriteIdList = new ConcurrentSkipListSet<>();
@@ -281,7 +359,7 @@ class IndexingService {
             } else {
                 // for update-rebuild or remove-rebuild this block will never come
                 for (Map.Entry<NitriteId, Document> entry : underlyingMap.entrySet()) {
-                    // createId the document
+                    // create the document
                     Document object = entry.getValue();
 
                     // retrieve the value from document

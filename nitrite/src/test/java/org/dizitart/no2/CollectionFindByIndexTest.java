@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
@@ -22,7 +24,6 @@ import org.junit.Test;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 
 import static org.dizitart.no2.FindOptions.sort;
@@ -361,5 +362,13 @@ public class CollectionFindByIndexTest extends BaseCollectionTest {
         assertEquals(cursor.size(), 2);
     }
 
+    @Test
+    public void testFindTextWithEmptyString() {
+        insert();
+        collection.createIndex("body", IndexOptions.indexOptions(IndexType.Fulltext));
+
+        Cursor cursor = collection.find(text("body", ""));
+        assertEquals(cursor.size(), 0);
+    }
 
 }

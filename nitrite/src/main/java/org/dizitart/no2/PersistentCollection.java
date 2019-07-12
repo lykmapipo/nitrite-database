@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
@@ -23,6 +25,7 @@ import org.dizitart.no2.exceptions.InvalidIdException;
 import org.dizitart.no2.exceptions.UniqueConstraintException;
 import org.dizitart.no2.meta.MetadataAware;
 
+import java.io.Closeable;
 import java.util.Collection;
 
 /**
@@ -34,7 +37,7 @@ import java.util.Collection;
  * @see NitriteCollection
  * @see org.dizitart.no2.objects.ObjectRepository
  */
-public interface PersistentCollection<T> extends ChangeAware, MetadataAware {
+public interface PersistentCollection<T> extends ChangeAware, MetadataAware, Closeable {
 
     /**
      * Creates an index on `value`, if not already exists.

@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,14 +13,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.util;
 
 import org.dizitart.no2.exceptions.IndexingException;
 import org.dizitart.no2.exceptions.ValidationException;
-import org.dizitart.no2.internals.JacksonMapper;
-import org.dizitart.no2.internals.NitriteMapper;
+import org.dizitart.no2.mapper.JacksonMapper;
+import org.dizitart.no2.mapper.NitriteMapper;
 import org.dizitart.no2.objects.Index;
 import org.junit.Test;
 

@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.sync;
@@ -39,7 +41,7 @@ public class SimpleSyncTest extends BaseSyncTest {
 
     @Test
     public void testSimpleSync() {
-        // createId primary sync handle
+        // create primary sync handle
         syncHandlePrimary = Replicator.of(primaryDb)
                 .forLocal(primary)
                 .withSyncTemplate(syncTemplate)
@@ -48,7 +50,7 @@ public class SimpleSyncTest extends BaseSyncTest {
                 .withListener(new SyncTestEventListener())
                 .configure();
 
-        // createId secondary sync handle
+        // create secondary sync handle
         syncHandleSecondary = Replicator.of(secondaryDb)
                 .forLocal(secondary)
                 .withSyncTemplate(syncTemplate)

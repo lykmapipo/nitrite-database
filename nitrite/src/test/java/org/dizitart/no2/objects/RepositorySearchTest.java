@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,22 +13,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.objects;
 
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import org.dizitart.no2.FindOptions;
+import org.dizitart.no2.NitriteId;
 import org.dizitart.no2.RecordIterable;
 import org.dizitart.no2.SortOrder;
-import org.dizitart.no2.objects.data.Employee;
-import org.dizitart.no2.objects.data.SubEmployee;
+import org.dizitart.no2.objects.data.*;
+import org.dizitart.no2.objects.filters.ObjectFilters;
 import org.junit.Test;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import static org.dizitart.no2.FindOptions.sort;
 import static org.dizitart.no2.objects.filters.ObjectFilters.ALL;
@@ -70,7 +71,6 @@ public class RepositorySearchTest extends BaseObjectRepositoryTest {
 
         Cursor<Employee> cursor = employeeRepository.find();
         assertNotNull(cursor.firstOrDefault());
-        cursor.reset();
         assertNotNull(cursor.toString());
         assertEquals(cursor.toList().size(), employeeList.size());
         assertNotNull(cursor.firstOrDefault());
@@ -104,6 +104,28 @@ public class RepositorySearchTest extends BaseObjectRepositoryTest {
                 .project(Employee.class)
                 .firstOrDefault();
         assertEquals(employee, emp);
+    }
+
+    @Test
+    public void testStringEqualFilter() {
+        ObjectRepository<WithPublicField> repository = db.getRepository(WithPublicField.class);
+
+        WithPublicField object = new WithPublicField();
+        object.name = "test";
+        object.number = 1;
+        repository.insert(object);
+
+        object = new WithPublicField();
+        object.name = "test";
+        object.number = 2;
+        repository.insert(object);
+
+        object = new WithPublicField();
+        object.name = "another-test";
+        object.number = 3;
+        repository.insert(object);
+
+        assertEquals(repository.find(eq("name", "test")).size(), 2);
     }
 
     @Test
@@ -336,23 +358,82 @@ public class RepositorySearchTest extends BaseObjectRepositoryTest {
         assertEquals(elements.size(), 2);
     }
 
-    @Data
-    private static class ElemMatch {
-        private long id;
-        private String[] strArray;
-        private ProductScore[] productScores;
+    @Test
+    public void testFilterAll() {
+        ObjectRepository<ElemMatch> repository = db.getRepository(ElemMatch.class);
+        Cursor<ElemMatch> cursor = repository.find(ObjectFilters.ALL);
+        assertNotNull(cursor);
+        assertEquals(cursor.size(), 0);
+
+        repository.insert(new ElemMatch());
+        cursor = repository.find(ObjectFilters.ALL);
+        assertNotNull(cursor);
+        assertEquals(cursor.size(), 1);
     }
 
-    @Getter @Setter
-    private static class ProductScore {
-        private String product;
-        private int score;
+    @Test
+    public void testEqualsOnTextIndex() {
+        PersonEntity p1 = new PersonEntity("jhonny");
+        PersonEntity p2 = new PersonEntity("jhonny");
+        PersonEntity p3 = new PersonEntity("jhonny");
 
-        ProductScore() {}
+        ObjectRepository<PersonEntity> repository = db.getRepository(PersonEntity.class);
+        repository.insert(p1);
+        repository.insert(p2);
+        repository.insert(p3);
 
-        ProductScore(String product, int score) {
-            this.product = product;
-            this.score = score;
-        }
+        List<PersonEntity> sameNamePeople = repository.find(eq("name", "jhonny")).toList();
+        assertEquals(sameNamePeople.size(), 3);
+
+        sameNamePeople = repository.find(eq("name", "JHONNY")).toList();
+        assertEquals(sameNamePeople.size(), 0);
+
+        sameNamePeople = repository.find(text("name", "jhonny")).toList();
+        assertEquals(sameNamePeople.size(), 3);
+
+        sameNamePeople = repository.find(text("name", "JHONNY")).toList();
+        assertEquals(sameNamePeople.size(), 3);
+
+        sameNamePeople = repository.find(eq("name", "jhon*")).toList();
+        assertEquals(sameNamePeople.size(), 0);
+
+        sameNamePeople = repository.find(text("name", "jhon*")).toList();
+        assertEquals(sameNamePeople.size(), 3);
+    }
+
+    @Test
+    public void testIssue62() {
+        PersonEntity p1 = new PersonEntity("abcd");
+        p1.setStatus("Married");
+
+        PersonEntity p2 = new PersonEntity("efgh");
+        p2.setStatus("Married");
+
+        PersonEntity p3 = new PersonEntity("ijkl");
+        p3.setStatus("Un-Married");
+
+        ObjectRepository<PersonEntity> repository = db.getRepository(PersonEntity.class);
+        repository.insert(p1);
+        repository.insert(p2);
+        repository.insert(p3);
+
+        ObjectFilter married = eq("status", "Married");
+        FindOptions sortBy = FindOptions.sort("status", SortOrder.Descending);
+
+        assertEquals(repository.find(married).size(), 2);
+        assertEquals(repository.find(married, sortBy).size(), 2);
+
+        assertEquals(repository.find(sortBy).firstOrDefault().getStatus(), "Un-Married");
+
+        sortBy = FindOptions.sort("status", SortOrder.Ascending);
+        assertEquals(repository.find(sortBy).size(), 3);
+        assertEquals(repository.find(sortBy).firstOrDefault().getStatus(), "Married");
+    }
+
+    @Test
+    public void testIdSet() {
+        Cursor<Employee> employees = employeeRepository.find(sort("empId", SortOrder.Ascending));
+        Set<NitriteId> nitriteIds = employees.idSet();
+        assertEquals(nitriteIds.size(), 10);
     }
 }

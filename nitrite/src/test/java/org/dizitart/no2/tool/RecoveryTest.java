@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.tool;
@@ -31,6 +33,7 @@ import static org.dizitart.no2.Document.createDocument;
 import static org.dizitart.no2.DbTestOperations.getRandomTempDbFile;
 import static org.dizitart.no2.filters.Filters.ALL;
 import static org.dizitart.no2.tool.Recovery.recover;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Anindya Chatterjee.
@@ -39,7 +42,7 @@ public class RecoveryTest {
     private static final String fileName = getRandomTempDbFile();
 
     @Test
-    public void testRecovery() throws ParseException, IOException {
+    public void testRecovery() throws ParseException {
         Nitrite db;
         NitriteCollection collection;
         db = Nitrite.builder()
@@ -77,7 +80,7 @@ public class RecoveryTest {
         db.commit();
         db.close();
 
-        recover(fileName);
+        assertTrue(recover(fileName));
     }
 
     @After

@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.exceptions;
@@ -94,22 +96,21 @@ public class ErrorCodes {
     public static final int VE_PROJECT_NULL_PROJECTION = 1068;
     public static final int VE_OBJ_CREATE_INDEX_NULL_FIELD = 1069;
     public static final int VE_OBJ_UPDATE_NULL_OBJECT = 1070;
-    public static final int VE_OBJ_UPDATE_NULL_UPDATE_OPTIONS = 1071;
-    public static final int VE_OBJ_FIND_WITH_OPTIONS_NULL_FILTER = 1072;
-    public static final int VE_FIND_NULL_FILTER = 1073;
-    public static final int VE_FIND_FILTERED_NULL_FILTER = 1074;
-    public static final int VE_OBJ_UPDATE_NULL_DOCUMENT = 1075;
-    public static final int VE_OBJ_FIND_NULL_FILTER = 1076;
-    public static final int VE_NC_REBUILD_INDEX_NULL_INDEX = 1077;
-    public static final int VE_OBJ_INVALID_EMBEDDED_FIELD = 1078;
-    public static final int VE_OBJ_INVALID_FIELD = 1079;
-    public static final int VE_BIG_DECIMAL_INVALID_FORMAT = 1080;
-    public static final int VE_INVALID_EMBEDDED_FIELD = 1081;
-    public static final int VE_NEGATIVE_LIST_INDEX_FIELD = 1082;
-    public static final int VE_INVALID_LIST_INDEX_FIELD = 1083;
-    public static final int VE_NEGATIVE_ARRAY_INDEX_FIELD = 1084;
-    public static final int VE_INVALID_ARRAY_INDEX_FIELD = 1085;
-    public static final int VE_INVALID_REMAINING_FIELD = 1086;
+    public static final int VE_OBJ_UPDATE_NULL_DOCUMENT = 1071;
+    public static final int VE_NC_REBUILD_INDEX_NULL_INDEX = 1072;
+    public static final int VE_OBJ_INVALID_EMBEDDED_FIELD = 1073;
+    public static final int VE_OBJ_INVALID_FIELD = 1074;
+    public static final int VE_BIG_DECIMAL_INVALID_FORMAT = 1075;
+    public static final int VE_INVALID_EMBEDDED_FIELD = 1076;
+    public static final int VE_NEGATIVE_LIST_INDEX_FIELD = 1077;
+    public static final int VE_INVALID_LIST_INDEX_FIELD = 1078;
+    public static final int VE_NEGATIVE_ARRAY_INDEX_FIELD = 1079;
+    public static final int VE_INVALID_ARRAY_INDEX_FIELD = 1080;
+    public static final int VE_INVALID_REMAINING_FIELD = 1081;
+    public static final int VE_TYPE_NOT_SERIALIZABLE = 1082;
+    public static final int VE_PROJECTION_WITH_NOT_NULL_VALUE = 1083;
+    public static final int VE_OBJ_STORE_NULL_KEY = 1084;
+    public static final int VE_OBJ_STORE_EMPTY_KEY = 1085;
 
     /* NitriteIOException Codes */
     public static final int NIOE_DATABASE_OPENED = 2001;
@@ -126,6 +127,7 @@ public class ErrorCodes {
     public static final int NIOE_DIR_DOES_NOT_EXISTS = 2012;
     public static final int NIOE_FILE_CREATE_FAILED = 2013;
     public static final int NIOE_IN_MEMORY_READONLY_DB = 2014;
+    public static final int NIOE_PATH_IS_DIRECTORY = 2018;
 
     /* InvalidOperationException Codes */
     public static final int IOE_IN_MEMORY_READONLY_DB = 3001;
@@ -137,6 +139,8 @@ public class ErrorCodes {
     public static final int IOE_COMPOUND_INDEX = 3007;
     public static final int IOE_REPLICATOR_RUNNING = 3008;
     public static final int IOE_DOC_ID_AUTO_GENERATED = 3009;
+    public static final int IOE_OBJ_REMOVE_JOINED_OBJECT_ITERATOR = 3010;
+    public static final int IOE_OBJ_MULTI_UPDATE_WITH_JUST_ONCE = 3011;
 
     /* FilterException Codes */
     public static final int FE_AND_INVALID = 4001;
@@ -216,6 +220,8 @@ public class ErrorCodes {
     public static final int IIE_ID_VALUE_EMPTY_STRING = 6005;
     public static final int IIE_FAILED_TO_CREATE_AUTO_ID = 6006;
     public static final int IIE_NULL_ID_FILTER_VALUE = 6007;
+    public static final int IIE_CANNOT_ACCESS_AUTO_ID = 6008;
+    public static final int IIE_AUTO_ID_ALREADY_SET = 6009;
 
     /* SecurityException Codes */
     public static final int SE_INVALID_USER_PASSWORD = 7001;
@@ -242,6 +248,7 @@ public class ErrorCodes {
     public static final int UCE_CONSTRAINT_VIOLATED = 10001;
     public static final int UCE_BUILD_INDEX_CONSTRAINT_VIOLATED = 10002;
     public static final int UCE_UPDATE_INDEX_CONSTRAINT_VIOLATED = 10003;
+    public static final int UCE_REFRESH_INDEX_CONSTRAINT_VIOLATED = 10004;
 
     /* SyncException Codes */
     public static final int SYE_GET_ACCOUNT_REMOTE_ERROR = 11001;

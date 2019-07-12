@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
@@ -187,6 +189,11 @@ public class Constants {
      * The constant DELETE_TIME.
      */
     public static final String DELETE_TIME = "deleteTime";
+
+    /**
+     * The constant KEY_OBJ_SEPARATOR.
+     * */
+    public static final String KEY_OBJ_SEPARATOR = "+";
 
     /**
      * The constant HASH_ITERATIONS.

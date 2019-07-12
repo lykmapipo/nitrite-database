@@ -13,7 +13,12 @@ services:
   - docker
   - mongodb
 
+branches:
+  except:
+    - /^feature-.*$/
+
 before_install:
+  - openssl aes-256-cbc -pass pass:$PGP_KEY_PASSWORD -in ./.ci/secring.gpg.enc -out ~/secring.gpg -d -md md5
   - chmod a+x gradlew
   - chmod a+x ./.ci/build.sh
   - chmod a+x ./.ci/prepare-travis.sh
@@ -22,6 +27,8 @@ before_install:
 
 before_script:
   - rm nitrite-datagate/src/main/resources/application.properties
+
+install: true
 
 script:
   - travis_retry . ./.ci/build.sh
@@ -42,5 +49,5 @@ deploy:
 
 env:
   global:
-    - NITRITE_VERSION=1.0
+    - NITRITE_VERSION=3.3.0-SNAPSHOT
     - PGP_KEY_FILE=~/secring.gpg

@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.tool;
@@ -21,7 +23,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dizitart.no2.Nitrite;
 import org.dizitart.no2.exceptions.NitriteIOException;
-import org.dizitart.no2.internals.JacksonMapper;
+import org.dizitart.no2.mapper.JacksonFacade;
 
 import java.io.*;
 
@@ -57,7 +59,7 @@ public class Importer {
     public static Importer of(Nitrite db) {
         Importer importer = new Importer();
         importer.db = db;
-        ObjectMapper objectMapper = new JacksonMapper().getObjectMapper();
+        ObjectMapper objectMapper = new JacksonFacade().getObjectMapper();
         importer.jsonFactory = objectMapper.getFactory();
         return importer;
     }
@@ -78,8 +80,9 @@ public class Importer {
      * @throws NitriteIOException  if there is any low-level I/O error.
      */
     public void importFrom(File file) {
-        try {
-            importFrom(new FileInputStream(file));
+
+        try(FileInputStream stream = new FileInputStream(file);) {
+            importFrom(stream);
         } catch (IOException ioe) {
             throw new NitriteIOException(
                     errorMessage("I/O error while reading content from file " + file,

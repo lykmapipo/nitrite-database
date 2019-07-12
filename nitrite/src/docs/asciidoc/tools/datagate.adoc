@@ -1,12 +1,13 @@
 Nitrite DataGate is the replication server for Nitrite database. It comes as a separate product.
 It is available as a binary distribution or as a docker image.
 
-To get the latest binary distribution please visit the Release page of Github. The docker image
+To get the latest binary distribution please visit the
+https://github.com/dizitart/nitrite-database/releases[Release] page of Github. The docker image
 is available at docker hub
 
 [source,bash]
 --
-docker pull dizitart/nitrite-datagate:1.0
+docker pull dizitart/nitrite-datagate
 --
 
 *Configuration*
@@ -38,7 +39,7 @@ the desired result.
 
 [source,docker]
 --
-FROM dizitart/nitrite-datagate:1.0
+FROM dizitart/nitrite-datagate
 
 COPY keystore.jks /
 
@@ -58,5 +59,11 @@ ENV DATAGATE_MONGO_PASSWORD "demoPass"
 ENV DATAGATE_MONGO_DATABASE "demo"
 
 ## Starts the server
+RUN ["chmod", "+x", "./datagate.sh"]
 ENTRYPOINT [ "./datagate.sh" ]
+--
+
+Once the server is up and running, access the admin portal using the url
+--
+ http(s)://<ip>:<port>/datagate
 --

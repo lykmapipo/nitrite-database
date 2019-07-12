@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.tool;
@@ -22,7 +24,7 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dizitart.no2.Nitrite;
 import org.dizitart.no2.exceptions.NitriteIOException;
-import org.dizitart.no2.internals.JacksonMapper;
+import org.dizitart.no2.mapper.JacksonFacade;
 
 import java.io.*;
 
@@ -58,7 +60,7 @@ public class Exporter {
         Exporter exporter = new Exporter();
         exporter.db = db;
 
-        ObjectMapper objectMapper = new JacksonMapper().getObjectMapper();
+        ObjectMapper objectMapper = new JacksonFacade().getObjectMapper();
         exporter.jsonFactory = objectMapper.getFactory();
         exporter.options = new ExportOptions();
         return exporter;
@@ -92,6 +94,18 @@ public class Exporter {
      */
     public void exportTo(File file) {
         try {
+            if (file.isDirectory()) {
+                throw new IOException(file.getPath() + " is not a file");
+            }
+
+            File parent = file.getParentFile();
+            // if parent dir does not exists, try to create it
+            if (!parent.exists()) {
+                boolean result = parent.mkdirs();
+                if (!result) {
+                    throw new IOException("Failed to create parent directory " + parent.getPath());
+                }
+            }
             exportTo(new FileOutputStream(file));
         } catch (IOException ioe) {
             throw new NitriteIOException(

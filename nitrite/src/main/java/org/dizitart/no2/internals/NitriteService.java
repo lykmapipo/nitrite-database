@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.internals;
@@ -23,6 +25,7 @@ import org.dizitart.no2.event.EventBus;
 import org.dizitart.no2.fulltext.EnglishTextTokenizer;
 import org.dizitart.no2.fulltext.TextIndexingService;
 import org.dizitart.no2.fulltext.TextTokenizer;
+import org.dizitart.no2.mapper.NitriteMapper;
 import org.dizitart.no2.store.NitriteMap;
 
 import java.util.Collection;
@@ -374,6 +377,7 @@ public class NitriteService {
      */
     void dropCollection() {
         indexingService.dropAllIndices();
+        nitriteContext.dropCollection(mapStore.getName());
         mapStore.getStore().removeMap(mapStore);
     }
 
@@ -412,6 +416,6 @@ public class NitriteService {
         this.indexingService = new IndexingService(indexMetaService, textIndexingService, nitriteContext);
         this.indexedSearchService = new IndexedSearchService(indexMetaService, textIndexingService);
         this.searchService = new SearchService(this, mapStore);
-        this.dataService = new DataService(indexingService, searchService, mapStore, eventBus, nitriteContext);
+        this.dataService = new DataService(indexingService, searchService, mapStore, eventBus);
     }
 }

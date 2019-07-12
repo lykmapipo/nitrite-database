@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.tool;
@@ -29,6 +31,7 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.Map;
 import java.util.TreeMap;
@@ -63,9 +66,10 @@ public class Recovery {
      * newest good version.
      *
      * @param fileName the database file name
+     * @return `true` if repair successful; otherwise `false`
      */
-    public static void recover(String fileName) {
-        recover(fileName, new PrintWriter(System.out));
+    public static boolean recover(String fileName) {
+        return recover(fileName, new PrintWriter(System.out));
     }
 
     /**
@@ -74,12 +78,13 @@ public class Recovery {
      *
      * @param fileName the database file name
      * @param writer   the log writer
+     * @return `true` if repair successful; otherwise `false`
      */
-    public static void recover(String fileName, PrintWriter writer) {
+    public static boolean recover(String fileName, PrintWriter writer) {
         notNull(fileName, errorMessage("fileName can not be null", VE_RECOVER_NULL_FILE_NAME));
         notEmpty(fileName, errorMessage("fileName can not be empty", VE_RECOVER_EMPTY_FILE_NAME));
         notNull(writer, errorMessage("writer can not be null", VE_RECOVER_NULL_WRITER));
-        repair(fileName, writer);
+        return repair(fileName, writer);
     }
 
     /**
@@ -87,14 +92,15 @@ public class Recovery {
      *
      * @param fileName the file name
      */
-    private static void repair(String fileName, PrintWriter pw) {
+    private static boolean repair(String fileName, PrintWriter pw) {
         long version = Long.MAX_VALUE;
         OutputStream ignore = new OutputStream() {
             @Override
-            public void write(int b) throws IOException {
+            public void write(int b) {
                 // ignore
             }
         };
+        boolean repaired = false;
         while (version >= 0) {
             pw.println(version == Long.MAX_VALUE ? "Trying latest version" : ("Trying version " + version));
             pw.flush();
@@ -105,6 +111,7 @@ public class Recovery {
                     FilePath.get(fileName).moveTo(FilePath.get(fileName + ".back"), true);
                     FilePath.get(fileName + ".temp").moveTo(FilePath.get(fileName), true);
                     pw.println("Success");
+                    repaired = true;
                     break;
                 }
                 pw.println("    ... failed: " + error);
@@ -115,6 +122,7 @@ public class Recovery {
             version--;
         }
         pw.flush();
+        return repaired;
     }
 
     /**
@@ -230,7 +238,7 @@ public class Recovery {
                 if (data[i] == '\n') {
                     // set the position to the start of the first page
                     buff.position(pos + i + 1);
-                    String s = new String(data, 0, i, DataUtils.LATIN).trim();
+                    String s = new String(data, 0, i, StandardCharsets.ISO_8859_1).trim();
                     return fromString(s);
                 }
             }
@@ -266,7 +274,7 @@ public class Recovery {
             MVMap<String, String> meta = store.getMetaMap();
             Map<String, Object> header = store.getStoreHeader();
             long fileCreated = DataUtils.readHexLong(header, "created", 0L);
-            TreeMap<Integer, Chunk> chunks = new TreeMap<Integer, Chunk>();
+            TreeMap<Integer, Chunk> chunks = new TreeMap<>();
             long chunkLength = 0;
             long maxLength = 0;
             long maxLengthLive = 0;

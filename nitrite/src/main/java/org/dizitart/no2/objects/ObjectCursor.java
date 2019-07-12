@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,17 +13,19 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.objects;
 
 import org.dizitart.no2.*;
 import org.dizitart.no2.exceptions.InvalidOperationException;
-import org.dizitart.no2.internals.NitriteMapper;
+import org.dizitart.no2.mapper.NitriteMapper;
 import org.dizitart.no2.util.Iterables;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import static org.dizitart.no2.exceptions.ErrorCodes.VE_PROJECT_NULL_PROJECTION;
 import static org.dizitart.no2.exceptions.ErrorMessage.OBJ_REMOVE_ON_OBJECT_ITERATOR_NOT_SUPPORTED;
@@ -37,13 +40,11 @@ class ObjectCursor<T> implements Cursor<T> {
     private org.dizitart.no2.Cursor cursor;
     private NitriteMapper nitriteMapper;
     private Class<T> type;
-    private Iterator<T> cursorIterator;
 
     ObjectCursor(NitriteMapper nitriteMapper, org.dizitart.no2.Cursor cursor, Class<T> type) {
         this.nitriteMapper = nitriteMapper;
         this.cursor = cursor;
         this.type = type;
-        this.cursorIterator = new ObjectCursorIterator(cursor.iterator());
     }
 
     @Override
@@ -52,6 +53,18 @@ class ObjectCursor<T> implements Cursor<T> {
         notNull(projectionType, errorMessage("projection can not be null", VE_PROJECT_NULL_PROJECTION));
         Document dummyDoc = emptyDocument(nitriteMapper, projectionType);
         return new ProjectedObjectIterable<>(nitriteMapper, cursor.project(dummyDoc), projectionType);
+    }
+
+    @Override
+    public <Foreign, Joined> RecordIterable<Joined> join(Cursor<Foreign> foreignCursor,
+                                                         Lookup lookup, Class<Joined> type) {
+        ObjectCursor<Foreign> foreignObjectCursor = (ObjectCursor<Foreign>) foreignCursor;
+        return new JoinedObjectIterable<>(nitriteMapper, cursor.join(foreignObjectCursor.cursor, lookup), type);
+    }
+
+    @Override
+    public Set<NitriteId> idSet() {
+        return cursor.idSet();
     }
 
     @Override
@@ -71,27 +84,17 @@ class ObjectCursor<T> implements Cursor<T> {
 
     @Override
     public T firstOrDefault() {
-        T item = Iterables.firstOrDefault(this);
-        reset();
-        return item;
+        return Iterables.firstOrDefault(this);
     }
 
     @Override
     public List<T> toList() {
-        List<T> list = Iterables.toList(this);
-        reset();
-        return list;
+        return Iterables.toList(this);
     }
 
     @Override
     public Iterator<T> iterator() {
-        return cursorIterator;
-    }
-
-    @Override
-    public void reset() {
-        cursor.reset();
-        cursorIterator = new ObjectCursorIterator(cursor.iterator());
+        return new ObjectCursorIterator(cursor.iterator());
     }
 
     private class ObjectCursorIterator implements Iterator<T> {

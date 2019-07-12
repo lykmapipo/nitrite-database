@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,21 +13,26 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 buildscript {
     repositories {
-        maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-        maven { url "https://plugins.gradle.org/m2/" }
-        mavenCentral()
+        google()
+        jcenter()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.2.0'
+        classpath 'com.android.tools.build:gradle:3.3.0-alpha04'
     }
 }
 
 apply plugin: 'com.android.application'
+
+repositories {
+    google()
+    jcenter()
+}
 
 android {
     packagingOptions {
@@ -42,16 +48,17 @@ android {
         exclude 'META-INF/LGPL2.1'
     }
 
-    compileSdkVersion 24
-    buildToolsVersion '24'
+    compileSdkVersion 26
+//    buildToolsVersion "27.0.3"
 
     defaultConfig {
         applicationId "org.dizitart.no2.sample.android"
         minSdkVersion 15
-        targetSdkVersion 24
+        targetSdkVersion 26
         versionCode 1
         versionName "1.0"
-        multiDexEnabled true    //required
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+//        multiDexEnabled true    //required
     }
 
     buildTypes {
@@ -64,18 +71,26 @@ android {
     dexOptions {
         jumboMode true          // required
     }
+
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_7
-        targetCompatibility JavaVersion.VERSION_1_7
+        sourceCompatibility = JavaVersion.VERSION_1_7
+        targetCompatibility = JavaVersion.VERSION_1_7
+    }
+    
+    lintOptions {
+        abortOnError false
     }
 }
 
-sourceCompatibility = JavaVersion.VERSION_1_7
-targetCompatibility = JavaVersion.VERSION_1_7
 
 dependencies {
-    compile project(':nitrite')
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile 'com.android.support:appcompat-v7:24.2.0'
-    testCompile 'junit:junit:4.12'
+    implementation project(':nitrite')
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.android.support:appcompat-v7:26.1.0'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.2'
+    implementation 'com.android.support:design:26.1.0'
+    annotationProcessor 'org.projectlombok:lombok:1.16.18'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 }

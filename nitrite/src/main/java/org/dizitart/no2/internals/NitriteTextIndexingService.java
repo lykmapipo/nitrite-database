@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,11 +13,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.internals;
 
-import lombok.val;
 import org.dizitart.no2.NitriteId;
 import org.dizitart.no2.exceptions.FilterException;
 import org.dizitart.no2.exceptions.IndexingException;
@@ -39,6 +40,7 @@ import static org.dizitart.no2.util.IndexUtils.sortByScore;
 class NitriteTextIndexingService implements TextIndexingService {
     private TextTokenizer tokenizerService;
     private IndexMetaService indexMetaService;
+    private final Object indexLock = new Object();
 
     NitriteTextIndexingService(TextTokenizer textTokenizer, IndexMetaService indexMetaService) {
         this.tokenizerService = textTokenizer;
@@ -66,6 +68,12 @@ class NitriteTextIndexingService implements TextIndexingService {
                 ConcurrentSkipListSet<NitriteId> nitriteIds = indexMap.get(word);
                 if (nitriteIds != null) {
                     nitriteIds.remove(id);
+
+                    if (nitriteIds.isEmpty()) {
+                        indexMap.remove(word);
+                    } else {
+                        indexMap.put(word, nitriteIds);
+                    }
                 }
             }
         } catch (IOException ioe) {
@@ -109,18 +117,17 @@ class NitriteTextIndexingService implements TextIndexingService {
                     = indexMetaService.getIndexMap(field);
             Set<String> words = tokenizerService.tokenize(text);
 
-            Object fieldLock = indexMetaService.getFieldLock(field);
             for (String word : words) {
                 ConcurrentSkipListSet<NitriteId> nitriteIds = indexMap.get(word);
 
-                synchronized (fieldLock) {
+                synchronized (indexLock) {
                     if (nitriteIds == null) {
                         nitriteIds = new ConcurrentSkipListSet<>();
-                        indexMap.put(word, nitriteIds);
                     }
                 }
 
                 nitriteIds.add(id);
+                indexMap.put(word, nitriteIds);
             }
         } catch (IOException ioe) {
             throw new IndexingException(errorMessage(
@@ -159,9 +166,9 @@ class NitriteTextIndexingService implements TextIndexingService {
         Set<NitriteId> idSet = new LinkedHashSet<>();
         String term = searchString.substring(0, searchString.length() - 1);
 
-        for (val entry : indexMap.entrySet()) {
+        for (Map.Entry<Comparable, ConcurrentSkipListSet<NitriteId>> entry : indexMap.entrySet()) {
             String key = (String) entry.getKey();
-            if (key.startsWith(term.toUpperCase())) {
+            if (key.startsWith(term.toLowerCase())) {
                 idSet.addAll(entry.getValue());
             }
         }
@@ -173,9 +180,9 @@ class NitriteTextIndexingService implements TextIndexingService {
                 = indexMetaService.getIndexMap(field);
         Set<NitriteId> idSet = new LinkedHashSet<>();
 
-        for (val entry : indexMap.entrySet()) {
+        for (Map.Entry<Comparable, ConcurrentSkipListSet<NitriteId>> entry : indexMap.entrySet()) {
             String key = (String) entry.getKey();
-            if (key.contains(term.toUpperCase())) {
+            if (key.contains(term.toLowerCase())) {
                 idSet.addAll(entry.getValue());
             }
         }
@@ -190,11 +197,11 @@ class NitriteTextIndexingService implements TextIndexingService {
         NitriteMap<Comparable, ConcurrentSkipListSet<NitriteId>> indexMap
                 = indexMetaService.getIndexMap(field);
         Set<NitriteId> idSet = new LinkedHashSet<>();
-        String term = searchString.substring(1, searchString.length());
+        String term = searchString.substring(1);
 
-        for (val entry : indexMap.entrySet()) {
+        for (Map.Entry<Comparable, ConcurrentSkipListSet<NitriteId>> entry : indexMap.entrySet()) {
             String key = (String) entry.getKey();
-            if (key.endsWith(term.toUpperCase())) {
+            if (key.endsWith(term.toLowerCase())) {
                 idSet.addAll(entry.getValue());
             }
         }

@@ -1,12 +1,14 @@
 = Nitrite Database
 
+image:https://liberapay.com/assets/widgets/donate.svg["Donate using Liberapay", link="https://liberapay.com/anidotnet/donate"]
 image:https://travis-ci.org/dizitart/nitrite-database.svg?branch=master["Build Status", link="https://travis-ci.org/dizitart/nitrite-database"]
 image:https://codecov.io/gh/dizitart/nitrite-database/branch/master/graph/badge.svg["Coverage Status", link="https://codecov.io/gh/dizitart/nitrite-database"]
 image:https://javadoc.io/badge/org.dizitart/nitrite.svg["Javadocs", link=https://javadoc.io/doc/org.dizitart/nitrite]
 image:https://badges.gitter.im/dizitart/nitrite-database.svg["Gitter", link="https://gitter.im/dizitart/nitrite-database?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge"]
+image:https://opencollective.com/nitrite-database/backers/badge.svg["Backers on Open Collective", link="#backers"]
+image:https://opencollective.com/nitrite-database/sponsors/badge.svg["Backers on Open Collective", link="#sponsors"]
 
-
-image:http://www.dizitart.org/nitrite-database/doc/1.0/images/nitrite-logo.svg[Logo 200, 200]
+image:http://www.dizitart.org/nitrite-database/logo/nitrite-logo.svg[Logo 200, 200]
 
 **NO**sql **O**bject (*NO~2~* a.k.a Nitrite) database is an open source nosql embedded
 document store written in Java. It has MongoDB like API. It supports both
@@ -26,7 +28,22 @@ Nitrite is a server-less embedded database ideal for desktop, mobile or small we
 * Observable store
 * Both way replication via Nitrite DataGate server
 
-== Getting Started
+== Kotlin Extension
+
+Nitrite has a kotlin extension called **Potassium Nitrite** for kotlin developers.
+Visit https://github.com/dizitart/nitrite-database/tree/master/potassium-nitrite[here] for more details.
+
+== Data Explorer
+
+To view the data of a nitrite database file, use **Nitrite Explorer**. More details
+can be found https://github.com/dizitart/nitrite-database/tree/master/nitrite-explorer[here].
+
+== Data Replication
+
+To replicate data over different devices automatically, use **Nitrite DataGate** server. For more details
+visit https://github.com/dizitart/nitrite-database/tree/master/nitrite-datagate[here].
+
+== Getting Started with Nitrite
 
 === How To Install
 
@@ -57,9 +74,16 @@ compile 'org.dizitart:nitrite:{version}'
 *Initialize Database*
 [source,java]
 --
+//java initialization
 Nitrite db = Nitrite.builder()
         .compressed()
         .filePath("/tmp/test.db")
+        .openOrCreate("user", "password");
+
+//android initialization
+Nitrite db = Nitrite.builder()
+        .compressed()
+        .filePath(getFilesDir().getPath() + "/test.db")
         .openOrCreate("user", "password");
 --
 
@@ -79,8 +103,8 @@ ObjectRepository<Employee> repository = db.getRepository(Employee.class);
 --
 // provides index information for ObjectRepository
 @Indices({
-        @Index(field = "joinDate", type = IndexType.NonUnique),
-        @Index(field = "name", type = IndexType.Unique)
+        @Index(value = "joinDate", type = IndexType.NonUnique),
+        @Index(value = "name", type = IndexType.Unique)
 })
 public class Employee implements Serializable {
     // provides id field to uniquely identify an object inside an ObjectRepository
@@ -265,3 +289,24 @@ before you file an issue please check if it is already existing or not.
 == Maintainers
 
 * Anindya Chatterjee
+
+== Contributors
+
+This project exists thanks to all the people who contribute. https://github.com/dizitart/nitrite-database/blob/master/CONTRIBUTING.md[Contribute].
+image:https://opencollective.com/nitrite-database/contributors.svg?width=890["Contributors", link="https://github.com/dizitart/nitrite-database/graphs/contributors"]
+
+== Backers
+
+Thank you to all our backers! 🙏 https://opencollective.com/nitrite-database#backer[Become a backer]
+
+image:https://opencollective.com/nitrite-database/backers.svg?width=890["Backers", link="https://opencollective.com/nitrite-database#backers"]
+
+== Sponsors
+
+Support this project by becoming a sponsor. Your logo will show up here with a link to your website. https://opencollective.com/nitrite-database#sponsor[Become a sponsor]
+
+image:https://opencollective.com/nitrite-database/sponsor/0/avatar.svg["Sponsor", link="https://opencollective.com/nitrite-database/sponsor/0/website"]
+image:https://opencollective.com/nitrite-database/sponsor/1/avatar.svg["Sponsor", link="https://opencollective.com/nitrite-database/sponsor/1/website"]
+image:https://opencollective.com/nitrite-database/sponsor/2/avatar.svg["Sponsor", link="https://opencollective.com/nitrite-database/sponsor/2/website"]
+image:https://opencollective.com/nitrite-database/sponsor/3/avatar.svg["Sponsor", link="https://opencollective.com/nitrite-database/sponsor/3/website"]
+image:https://opencollective.com/nitrite-database/sponsor/4/avatar.svg["Sponsor", link="https://opencollective.com/nitrite-database/sponsor/4/website"]

@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.event;
@@ -37,7 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.awaitility.Awaitility.await;
 import static org.dizitart.no2.DbTestOperations.getRandomTempDbFile;
-import static org.dizitart.no2.UpdateOptions.updateOptions;
 import static org.dizitart.no2.objects.filters.ObjectFilters.ALL;
 import static org.dizitart.no2.objects.filters.ObjectFilters.eq;
 import static org.dizitart.no2.util.Iterables.firstOrDefault;
@@ -160,7 +161,7 @@ public class EventTest {
         e.setEmpId(1L);
         e.setAddress("abcd");
 
-        employeeRepository.update(eq("empId", 1), e, updateOptions(true));
+        employeeRepository.update(eq("empId", 1), e, true);
         await().atMost(1, TimeUnit.SECONDS).until(listenerPrepared(ChangeType.INSERT));
         assertEquals(listener.getAction(), ChangeType.INSERT);
         assertEquals(listener.getItems().size(), 1);

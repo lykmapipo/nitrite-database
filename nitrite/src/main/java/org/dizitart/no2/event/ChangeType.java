@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.event;
@@ -43,7 +45,6 @@ public enum ChangeType {
      * @see org.dizitart.no2.NitriteCollection#update(Filter, Document)
      * @see org.dizitart.no2.NitriteCollection#update(Filter, Document, UpdateOptions)
      * @see org.dizitart.no2.objects.ObjectRepository#update(ObjectFilter, Object)
-     * @see org.dizitart.no2.objects.ObjectRepository#update(ObjectFilter, Object, UpdateOptions)
      */
     UPDATE,
 

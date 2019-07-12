@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,24 +13,31 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
 
+import com.fasterxml.jackson.databind.Module;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.dizitart.no2.fulltext.TextIndexingService;
 import org.dizitart.no2.fulltext.TextTokenizer;
-import org.dizitart.no2.internals.JacksonMapper;
-import org.dizitart.no2.internals.NitriteMapper;
+import org.dizitart.no2.mapper.JacksonMapper;
+import org.dizitart.no2.mapper.NitriteMapper;
 import org.dizitart.no2.util.ExecutorUtils;
+import org.dizitart.no2.util.StringUtils;
 
-import java.util.List;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
 import static org.dizitart.no2.util.ExecutorUtils.shutdownAndAwaitTermination;
+import static org.dizitart.no2.util.ObjectUtils.isObjectStore;
 
 /**
  * Represents a readonly view of all contextual information of a nitrite database.
@@ -38,6 +46,7 @@ import static org.dizitart.no2.util.ExecutorUtils.shutdownAndAwaitTermination;
  * @since 1.0
  * @see Nitrite#getContext()
  */
+@Slf4j
 @Getter @Setter(AccessLevel.PACKAGE)
 public class NitriteContext {
     /**
@@ -126,10 +135,13 @@ public class NitriteContext {
     private NitriteMapper nitriteMapper;
 
     @Getter(AccessLevel.PACKAGE) @Setter(AccessLevel.PACKAGE)
-    private List<String> collectionRegistry;
+    private Set<String> collectionRegistry;
 
     @Getter(AccessLevel.PACKAGE) @Setter(AccessLevel.PACKAGE)
-    private List<Class<?>> repositoryRegistry;
+    private Map<String, Class<?>> repositoryRegistry;
+
+    @Getter(AccessLevel.NONE) @Setter(AccessLevel.PACKAGE)
+    private Set<Module> jacksonModule;
 
     /**
      * Instantiates a new Nitrite context.
@@ -146,13 +158,40 @@ public class NitriteContext {
      */
     public NitriteMapper getNitriteMapper() {
         if (nitriteMapper == null) {
-            nitriteMapper = new JacksonMapper();
+            if (jacksonModule == null || jacksonModule.isEmpty()) {
+                nitriteMapper = new JacksonMapper();
+            } else {
+                nitriteMapper = new JacksonMapper(jacksonModule);
+            }
         }
         return nitriteMapper;
     }
 
+    /**
+     * Gets the jackson {@link Module} registered with {@link JacksonMapper}.
+     *
+     * @return the set of jackson {@link Module}.
+     */
+    public Set<Module> getRegisteredModules() {
+        return new HashSet<>(jacksonModule);
+    }
+
+    public void dropCollection(String name) {
+        if (!StringUtils.isNullOrEmpty(name)) {
+            if (isObjectStore(name)) {
+                repositoryRegistry.remove(name);
+            } else {
+                collectionRegistry.remove(name);
+            }
+        }
+    }
+
+
+
     void shutdown() {
         shutdownAndAwaitTermination(scheduledWorkerPool, 5);
         shutdownAndAwaitTermination(workerPool, 5);
+        collectionRegistry.clear();
+        repositoryRegistry.clear();
     }
 }

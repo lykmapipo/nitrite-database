@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,10 +13,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
 
+import com.fasterxml.jackson.databind.Module;
 import lombok.extern.slf4j.Slf4j;
 import org.dizitart.no2.exceptions.InvalidOperationException;
 import org.dizitart.no2.exceptions.NitriteIOException;
@@ -23,25 +26,32 @@ import org.dizitart.no2.exceptions.SecurityException;
 import org.dizitart.no2.fulltext.EnglishTextTokenizer;
 import org.dizitart.no2.fulltext.TextIndexingService;
 import org.dizitart.no2.fulltext.TextTokenizer;
-import org.dizitart.no2.internals.NitriteMapper;
+import org.dizitart.no2.mapper.NitriteMapper;
 import org.dizitart.no2.store.NitriteMVStore;
 import org.dizitart.no2.store.NitriteStore;
 import org.dizitart.no2.util.StringUtils;
 import org.h2.mvstore.MVStore;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
+import static org.dizitart.no2.Constants.KEY_OBJ_SEPARATOR;
 import static org.dizitart.no2.Security.createSecurely;
 import static org.dizitart.no2.Security.openSecurely;
 import static org.dizitart.no2.exceptions.ErrorCodes.NIOE_DIR_DOES_NOT_EXISTS;
+import static org.dizitart.no2.exceptions.ErrorCodes.NIOE_PATH_IS_DIRECTORY;
 import static org.dizitart.no2.exceptions.ErrorMessage.*;
 import static org.dizitart.no2.tool.Recovery.recover;
+import static org.dizitart.no2.util.ObjectUtils.isKeyedObjectStore;
+import static org.dizitart.no2.util.ObjectUtils.isObjectStore;
 import static org.dizitart.no2.util.StringUtils.isNullOrEmpty;
+import static org.dizitart.no2.util.ValidationUtils.isValidCollectionName;
 
 /**
- * A builder utility to createId a {@link Nitrite} database instance.
+ * A builder utility to create a {@link Nitrite} database instance.
  *
  * === Example:
  *
@@ -97,22 +107,41 @@ public class NitriteBuilder {
     private boolean compress;
     private boolean autoCommit = true;
     private boolean autoCompact = true;
+    private boolean shutdownHook = true;
     private TextIndexingService textIndexingService;
     private TextTokenizer textTokenizer;
     private NitriteMapper nitriteMapper;
+    private Set<Module> jacksonModules;
 
     NitriteBuilder(){
+        jacksonModules = new HashSet<>();
     }
 
     /**
      * Sets file name for the file based store. If `file` is `null`
-     * the builder will createId an in-memory database.
+     * the builder will create an in-memory database.
      *
      * @param path the name of the file store.
      * @return the {@link NitriteBuilder} instance.
      */
     public NitriteBuilder filePath(String path) {
         this.filePath = path;
+        return this;
+    }
+
+    /**
+     * Sets file name for the file based store. If `file` is `null`
+     * the builder will create an in-memory database.
+     *
+     * @param file the name of the file store.
+     * @return the {@link NitriteBuilder} instance.
+     */
+    public NitriteBuilder filePath(File file) {
+        if (file == null) {
+            this.filePath = null;
+        } else {
+            this.filePath = file.getPath();
+        }
         return this;
     }
 
@@ -230,7 +259,7 @@ public class NitriteBuilder {
      * is used. The default tokenizer works on english language only.
      *
      * For non-english languages like chinese, japanese etc.,
-     * a custom {@link TextTokenizer} implementation needs to be set here.
+     * a {@link org.dizitart.no2.fulltext.UniversalTextTokenizer} needs to be set here.
      *
      * [icon="{@docRoot}/alert.png"]
      * [CAUTION]
@@ -247,6 +276,7 @@ public class NitriteBuilder {
      * @param textTokenizer the {@link TextTokenizer} implementation.
      * @return the {@link NitriteBuilder} instance.
      * @see org.dizitart.no2.fulltext.EnglishTextTokenizer
+     * @see org.dizitart.no2.fulltext.UniversalTextTokenizer
      */
     public NitriteBuilder textTokenizer(TextTokenizer textTokenizer) {
         this.textTokenizer = textTokenizer;
@@ -255,12 +285,13 @@ public class NitriteBuilder {
 
     /**
      * Sets a custom {@link NitriteMapper} implementation. If not set, a default
-     * jackson based mapper {@link org.dizitart.no2.internals.JacksonMapper} will
+     * jackson based mapper {@link org.dizitart.no2.mapper.JacksonMapper} will
      * be used.
      *
      * @param nitriteMapper a {@link NitriteMapper} implementation
      * @return the {@link NitriteBuilder} instance.
-     * @see org.dizitart.no2.internals.JacksonMapper
+     * @see org.dizitart.no2.mapper.GenericMapper
+     * @see org.dizitart.no2.mapper.JacksonMapper
      * */
     public NitriteBuilder nitriteMapper(NitriteMapper nitriteMapper) {
         this.nitriteMapper = nitriteMapper;
@@ -268,9 +299,42 @@ public class NitriteBuilder {
     }
 
     /**
+     * Disables JVM shutdown hook for closing the database gracefully.
+     *
+     * @return the {@link NitriteBuilder} instance.
+     * */
+    public NitriteBuilder disableShutdownHook() {
+        shutdownHook = false;
+        return this;
+    }
+
+    /**
+     * Registers a jackson {@link Module} to the {@link org.dizitart.no2.mapper.JacksonFacade}.
+     *
+     * [icon="{@docRoot}/note.png"]
+     * [NOTE]
+     * --
+     * This is only useful when the default {@link NitriteMapper} viz.
+     * {@link org.dizitart.no2.mapper.JacksonMapper} is used.
+     *
+     * --
+     *
+     * @param module jackson module to register
+     * @return the {@link NitriteBuilder} instance.
+     * @see org.dizitart.no2.mapper.JacksonFacade
+     * @see org.dizitart.no2.mapper.JacksonMapper
+     * @see NitriteMapper
+     * @see org.dizitart.no2.mapper.GenericMapper
+     * */
+    public NitriteBuilder registerModule(Module module) {
+        this.jacksonModules.add(module);
+        return this;
+    }
+
+    /**
      * Opens or creates a new database. If it is an in-memory store, then it
-     * will createId a new one. If it is a file based store, and if the file does not
-     * exists, then it will createId a new file store and open; otherwise it will
+     * will create a new one. If it is a file based store, and if the file does not
+     * exists, then it will create a new file store and open; otherwise it will
      * open the existing file store.
      *
      * [icon="{@docRoot}/note.png"]
@@ -288,7 +352,7 @@ public class NitriteBuilder {
      * --
      *
      * @return the nitrite database instance.
-     * @throws NitriteIOException if unable to createId a new in-memory database.
+     * @throws NitriteIOException if unable to create a new in-memory database.
      * @throws NitriteIOException if the database is corrupt and recovery fails.
      * @throws IllegalArgumentException if the directory does not exist.
      */
@@ -298,8 +362,8 @@ public class NitriteBuilder {
 
     /**
      * Opens or creates a new database. If it is an in-memory store, then it
-     * will createId a new one. If it is a file based store, and if the file does not
-     * exists, then it will createId a new file store and open; otherwise it will
+     * will create a new one. If it is a file based store, and if the file does not
+     * exists, then it will create a new file store and open; otherwise it will
      * open the existing file store.
      *
      * While creating a new database, it will use the specified user credentials.
@@ -324,7 +388,7 @@ public class NitriteBuilder {
      * @param password the password
      * @return the nitrite database instance.
      * @throws SecurityException if the user credentials are wrong or one of them is empty string.
-     * @throws NitriteIOException if unable to createId a new in-memory database.
+     * @throws NitriteIOException if unable to create a new in-memory database.
      * @throws NitriteIOException if the database is corrupt and recovery fails.
      * @throws NitriteIOException if the directory does not exist.
      */
@@ -364,6 +428,9 @@ public class NitriteBuilder {
             builder = builder.autoCommitDisabled();
         }
 
+        // auto compact disabled github issue #41
+        builder.autoCompactFillRate(0);
+
         MVStore store = null;
         File dbFile = null;
         try {
@@ -384,7 +451,12 @@ public class NitriteBuilder {
 
             if (!isNullOrEmpty(filePath)) {
                 try {
-                    if (Files.exists(Paths.get(filePath))) {
+                    File file = new File(filePath);
+                    if (file.isDirectory()) {
+                        throw new NitriteIOException(errorMessage(filePath + " is a directory, must be a file", NIOE_PATH_IS_DIRECTORY));
+                    }
+
+                    if (file.exists() && file.isFile()) {
                         log.error("Database corruption detected. Trying to repair", ise);
                         recover(filePath);
                         store = builder.open();
@@ -436,14 +508,62 @@ public class NitriteBuilder {
             context.setAutoCommitEnabled(autoCommit);
             context.setAutoCompactEnabled(autoCompact);
             context.setNitriteMapper(nitriteMapper);
+            context.setJacksonModule(jacksonModules);
 
             NitriteStore nitriteStore = new NitriteMVStore(store);
+
+            // populate existing maps
+            context.setCollectionRegistry(populateCollections(nitriteStore));
+            context.setRepositoryRegistry(populateRepositories(nitriteStore));
+
             Nitrite db = new Nitrite(nitriteStore, context);
 
             // shutdown hook to close db file gracefully
-            Runtime.getRuntime().addShutdownHook(new NitriteShutDownHook(db));
+            if (shutdownHook) {
+                Runtime.getRuntime().addShutdownHook(new NitriteShutDownHook(db));
+            }
             return db;
         }
         return null;
+    }
+
+    private Set<String> populateCollections(NitriteStore store) {
+        Set<String> collectionRegistry = new HashSet<>();
+        if (store != null) {
+            for (String name : store.getMapNames()) {
+                if (isValidCollectionName(name) && !isObjectStore(name)) {
+                    collectionRegistry.add(name);
+                }
+            }
+        } else {
+            log.error("Underlying store is null. Nitrite has not been initialized properly.");
+        }
+        return collectionRegistry;
+    }
+
+    private Map<String, Class<?>> populateRepositories(NitriteStore store) {
+        Map<String, Class<?>> repositoryRegistry = new HashMap<>();
+        if (store != null) {
+            for (String name : store.getMapNames()) {
+                if (isValidCollectionName(name) && isObjectStore(name)) {
+                    try {
+                        if (isKeyedObjectStore(name)) {
+                            String[] split = name.split("\\" + KEY_OBJ_SEPARATOR);
+                            String typeName = split[0];
+                            Class<?> type = Class.forName(typeName);
+                            repositoryRegistry.put(name, type);
+                        } else {
+                            Class<?> type = Class.forName(name);
+                            repositoryRegistry.put(name, type);
+                        }
+                    } catch (ClassNotFoundException e) {
+                        log.error("Could not find the class " + name);
+                    }
+                }
+            }
+        } else {
+            log.error("Underlying store is null. Nitrite has not been initialized properly.");
+        }
+        return repositoryRegistry;
     }
 }

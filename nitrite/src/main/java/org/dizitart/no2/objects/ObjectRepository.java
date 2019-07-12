@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2.objects;
@@ -148,12 +150,12 @@ public interface ObjectRepository<T> extends PersistentCollection<T> {
      *
      * @param filter        the filter to apply to select objects from the collection.
      * @param update        the modifications to apply.
-     * @param updateOptions the update options to customize the operation.
+     * @param upsert        if set to `true`, `update` object will be inserted if not found.
      * @return the result of the update operation.
      * @throws org.dizitart.no2.exceptions.ValidationException if the `update` object is `null`.
      * @throws org.dizitart.no2.exceptions.ValidationException if `updateOptions` is `null`.
      */
-    WriteResult update(ObjectFilter filter, T update, UpdateOptions updateOptions);
+    WriteResult update(ObjectFilter filter, T update, boolean upsert);
 
     /**
      * Updates objects in the repository by setting the field specified in `document`.

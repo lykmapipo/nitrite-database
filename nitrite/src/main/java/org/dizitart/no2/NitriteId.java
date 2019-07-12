@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
@@ -20,6 +22,7 @@ import lombok.EqualsAndHashCode;
 import org.dizitart.no2.exceptions.InvalidIdException;
 
 import java.io.Serializable;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.dizitart.no2.Constants.ID_PREFIX;
 import static org.dizitart.no2.Constants.ID_SUFFIX;
@@ -32,7 +35,7 @@ import static org.dizitart.no2.exceptions.ErrorMessage.FAILED_TO_CREATE_AUTO_ID;
  *
  * During insertion if an unique object is supplied in the '_id' field
  * of the document, then the value of the '_id' field will be used to
- * createId a new {@link NitriteId}. If that is not supplied, then nitrite
+ * create a new {@link NitriteId}. If that is not supplied, then nitrite
  * will auto generate one and supply it in the '_id' field of the document.
  *
  *
@@ -43,11 +46,12 @@ import static org.dizitart.no2.exceptions.ErrorMessage.FAILED_TO_CREATE_AUTO_ID;
 @EqualsAndHashCode
 public final class NitriteId implements Comparable<NitriteId>, Serializable {
     private static final long serialVersionUID = 1477462375L;
+    private static final AtomicLong counter = new AtomicLong(System.nanoTime());
 
     private Long idValue;
 
     private NitriteId() {
-        idValue = new ObjectId().toLong();
+        idValue = counter.getAndIncrement();
     }
 
     private NitriteId(Long value) {

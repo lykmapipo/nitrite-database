@@ -1,5 +1,6 @@
 /*
- * Copyright 2017 Nitrite author or authors.
+ *
+ * Copyright 2017-2018 Nitrite author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.dizitart.no2;
@@ -27,17 +29,11 @@ import org.dizitart.no2.store.NitriteStore;
 import java.io.Closeable;
 import java.nio.channels.NonWritableChannelException;
 import java.util.LinkedHashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-import static org.dizitart.no2.Constants.INTERNAL_NAME_SEPARATOR;
-import static org.dizitart.no2.Constants.USER_MAP;
 import static org.dizitart.no2.Security.validateUserPassword;
-import static org.dizitart.no2.util.ObjectUtils.findObjectTypeName;
 import static org.dizitart.no2.util.ObjectUtils.findObjectStoreName;
-import static org.dizitart.no2.util.ObjectUtils.isObjectStore;
-import static org.dizitart.no2.util.StringUtils.isNullOrEmpty;
-import static org.dizitart.no2.util.ValidationUtils.isValidCollectionName;
 import static org.dizitart.no2.util.ValidationUtils.validateCollectionName;
 
 
@@ -55,7 +51,7 @@ import static org.dizitart.no2.util.ValidationUtils.validateCollectionName;
  * [NOTE]
  * ====
  *  - It does not support ACID transactions.
- *  - Use {@link NitriteBuilder} to createId a db instance.
+ *  - Use {@link NitriteBuilder} to create a db instance.
  * ====
  *
  * @author Anindya Chatterjee
@@ -78,7 +74,7 @@ public class Nitrite implements Closeable {
     }
 
     /**
-     * Provides a builder utility to createId a {@link Nitrite} database
+     * Provides a builder utility to create a {@link Nitrite} database
      * instance.
      *
      * @return a {@link NitriteBuilder} instance.
@@ -114,7 +110,9 @@ public class Nitrite implements Closeable {
         validateCollectionName(name);
         if (store != null) {
             NitriteMap<NitriteId, Document> mapStore = store.openMap(name);
-            return CollectionFactory.open(mapStore, context);
+            NitriteCollection collection = CollectionFactory.open(mapStore, context);
+            context.getCollectionRegistry().add(name);
+            return collection;
         } else {
             log.error("Underlying store is null. Nitrite has not been initialized properly.");
         }
@@ -139,7 +137,37 @@ public class Nitrite implements Closeable {
             String name = findObjectStoreName(type);
             NitriteMap<NitriteId, Document> mapStore = store.openMap(name);
             NitriteCollection collection = CollectionFactory.open(mapStore, context);
-            return RepositoryFactory.open(type, collection, context);
+            ObjectRepository<T> repository = RepositoryFactory.open(type, collection, context);
+            context.getRepositoryRegistry().put(name, type);
+            return repository;
+        } else {
+            log.error("Underlying store is null. Nitrite has not been initialized properly.");
+        }
+        return null;
+    }
+
+    /**
+     * Opens a type-safe object repository with a key identifier from the store. If the repository
+     * does not exist it will be created automatically and returned. If a
+     * repository is already opened, it is returned as is.
+     * 
+     * [icon="{@docRoot}/note.png"]
+     * NOTE: Returned repository is thread-safe for concurrent use.
+     *
+     * @param <T>  the type parameter
+     * @param key  the key that will be appended to the repositories name
+     * @param type the type of the object
+     * @return the repository containing objects of type {@link T}.
+     * @see ObjectRepository
+     */
+    public <T> ObjectRepository<T> getRepository(String key, Class<T> type) {
+        if (store != null) {
+            String name = findObjectStoreName(key, type);
+            NitriteMap<NitriteId, Document> mapStore = store.openMap(name);
+            NitriteCollection collection = CollectionFactory.open(mapStore, context);
+            ObjectRepository<T> repository = RepositoryFactory.open(type, collection, context);
+            context.getRepositoryRegistry().put(name, type);
+            return repository;
         } else {
             log.error("Underlying store is null. Nitrite has not been initialized properly.");
         }
@@ -152,17 +180,7 @@ public class Nitrite implements Closeable {
      * @return the set of all collections' names.
      */
     public Set<String> listCollectionNames() {
-        Set<String> collectionNames = new LinkedHashSet<>();
-        if (store != null) {
-            for (String name : store.getMapNames()) {
-                if (isValidCollectionName(name) && !isObjectStore(name)) {
-                    collectionNames.add(name);
-                }
-            }
-        } else {
-            log.error("Underlying store is null. Nitrite has not been initialized properly.");
-        }
-        return collectionNames;
+        return new LinkedHashSet<>(context.getCollectionRegistry());
     }
 
     /**
@@ -172,21 +190,7 @@ public class Nitrite implements Closeable {
      * @return the set of all registered classes' names.
      */
     public Set<String> listRepositories() {
-        Set<String> repositoryNames = new LinkedHashSet<>();
-        if (store != null) {
-            for (String name : store.getMapNames()) {
-                if (!name.contains(INTERNAL_NAME_SEPARATOR)
-                        && !name.contains(USER_MAP)) {
-                    String objectType = findObjectTypeName(name);
-                    if (!isNullOrEmpty(objectType)) {
-                        repositoryNames.add(objectType);
-                    }
-                }
-            }
-        } else {
-            log.error("Underlying store is null. Nitrite has not been initialized properly.");
-        }
-        return repositoryNames;
+        return new LinkedHashSet<>(context.getRepositoryRegistry().keySet());
     }
 
     /**
@@ -196,7 +200,7 @@ public class Nitrite implements Closeable {
      * @return `true` if the collection exists; otherwise `false`.
      */
     public boolean hasCollection(String name) {
-        return listCollectionNames().contains(name);
+        return context.getCollectionRegistry().contains(name);
     }
 
     /**
@@ -207,7 +211,20 @@ public class Nitrite implements Closeable {
      * @return `true` if the repository exists; otherwise `false`.
      */
     public <T> boolean hasRepository(Class<T> type) {
-        return listRepositories().contains(type.getName());
+        return context.getRepositoryRegistry().containsKey(findObjectStoreName(type));
+    }
+
+    /**
+     * Checks whether a particular {@link ObjectRepository} and key combination
+     * exists in the store.
+     *
+     * @param <T>  the type parameter
+     * @param key  the key that will be appended to the repositories name
+     * @param type the type of the object
+     * @return `true` if the repository exists; otherwise `false`.
+     */
+    public <T> boolean hasRepository(String key, Class<T> type) {
+        return context.getRepositoryRegistry().containsKey(findObjectStoreName(key, type));
     }
 
     /**
@@ -225,7 +242,7 @@ public class Nitrite implements Closeable {
     public void compact() {
         if (store != null && !store.isClosed()
                 && !context.isReadOnly()) {
-            store.compactMoveChunks();
+            store.compact();
             if (log.isDebugEnabled()) {
                 log.debug("Store compaction is successful.");
             }
@@ -259,7 +276,7 @@ public class Nitrite implements Closeable {
      * Closes the database. Unsaved changes are written to disk and compacted first
      * for a file based store.
      */
-    public void close() {
+    public synchronized void close() {
         if (store != null) {
             try {
                 if (hasUnsavedChanges()) {
@@ -288,8 +305,6 @@ public class Nitrite implements Closeable {
                 store = null;
                 log.info("Nitrite database has been closed successfully.");
             }
-        } else {
-            log.error("Underlying store is null. Nitrite has not been initialized properly.");
         }
     }
 
@@ -300,7 +315,7 @@ public class Nitrite implements Closeable {
      * NOTE: This operation is called from the JVM shutdown hook to
      * avoid database corruption.
      * */
-    void closeImmediately() {
+    synchronized void closeImmediately() {
         if (store != null) {
             try {
                 store.closeImmediately();
@@ -315,8 +330,6 @@ public class Nitrite implements Closeable {
                 store = null;
                 log.info("Nitrite database has been closed by JVM shutdown hook without saving last unsaved changes.");
             }
-        } else {
-            log.error("Underlying store is null. Nitrite has not been initialized properly.");
         }
     }
 
@@ -342,7 +355,7 @@ public class Nitrite implements Closeable {
     }
 
     private void closeCollections() {
-        List<String> collections = context.getCollectionRegistry();
+        Set<String> collections = context.getCollectionRegistry();
         if (collections != null) {
             for (String name : collections) {
                 NitriteCollection collection = getCollection(name);
@@ -353,12 +366,12 @@ public class Nitrite implements Closeable {
             collections.clear();
         }
 
-        List<Class<?>> repositories = context.getRepositoryRegistry();
+        Map<String, Class<?>> repositories = context.getRepositoryRegistry();
         if (repositories != null) {
-            for (Class<?> type : repositories) {
-                ObjectRepository<?> repository = getRepository(type);
-                if (repository != null && !repository.isClosed()) {
-                    repository.close();
+            for (String name : repositories.keySet()) {
+                NitriteCollection collection = getCollection(name);
+                if (collection != null && !collection.isClosed()) {
+                    collection.close();
                 }
             }
             repositories.clear();
